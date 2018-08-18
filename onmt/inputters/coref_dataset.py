@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Define word-based embedders."""
 
-import argparse
-import gzip
 import itertools
 import spacy
 
@@ -12,7 +10,6 @@ import torchtext
 import allennlp.data.dataset_readers
 
 from onmt.inputters.dataset_base import (DatasetBase, PAD_WORD, BOS_WORD, EOS_WORD)
-from onmt.utils.logging import logger
 
 
 class CorefDataset(DatasetBase):
@@ -166,39 +163,3 @@ def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
     if examples:
         yield CorefDataset(examples, fields, filter_pred)
 
-
-def openfile(fname, mode='r'):
-    if fname.endswith('.gz'):
-        return gzip.open(fname, mode, encoding='utf-8')
-    else:
-        return open(fname, mode)
-
-
-def process_corpus(corpus_type, file_stem, src, tgt, docids, shard_size):
-    with openfile(src) as f_src, openfile(tgt) as f_tgt, openfile(docids) as f_docids:
-        for index, dataset in enumerate(create_coref_datasets(f_src, f_tgt, f_docids, shard_size)):
-            # We save fields in vocab.pt separately, so make it empty.
-            dataset.fields = []
-
-            pt_file = "{:s}.{:s}.{:d}.pt".format(file_stem, corpus_type, index)
-            logger.info(" * saving %s data shard to %s." % (corpus_type, pt_file))
-            torch.save(dataset, pt_file)
-
-
-def main():
-    parser = argparse.ArgumentParser(description='Tokenise and preprocess corpus for coref-mt.')
-    parser.add_argument('-train', nargs=3, help='Training corpus (src, tgt, docids).', required=True)
-    parser.add_argument('-valid', nargs=3, help='Validation corpus (src, tgt, docids).', required=True)
-    parser.add_argument('-shard_size', type=int, default=10 * 1024 * 1024, help='Shard size in bytes.')
-    parser.add_argument('-save', help='Output file prefix.', required=True)
-    args = parser.parse_args()
-
-    logger.info('Processing training corpus.')
-    process_corpus('train', args.save, args.train[0], args.train[1], args.train[2], args.shard_size)
-
-    logger.info('Processing validation corpus.')
-    process_corpus('valid', args.save, args.valid[0], args.valid[1], args.valid[2], args.shard_size)
-
-
-if __name__ == '__main__':
-    main()
