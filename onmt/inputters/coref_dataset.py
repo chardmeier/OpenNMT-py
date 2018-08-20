@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """Define word-based embedders."""
 
+import collections
 import itertools
 import spacy
 
 import torch
 import torchtext
 
-import allennlp.data.dataset_readers
+import allennlp.data
 
 from onmt.inputters.dataset_base import (DatasetBase, PAD_WORD, BOS_WORD, EOS_WORD)
 
@@ -105,22 +106,59 @@ class CorefDataset(DatasetBase):
 
 
 class DocumentBuilder:
-    def __init__(self, max_span_width=10):
-        self.instance_builder = allennlp.data.dataset_readers.ConllCorefReader(max_span_width)
+    def __init__(self, coref_model, max_span_width=10):
+        if coref_model is None:
+            self.dataset_reader = allennlp.data.DatasetReader.by_name('coref')(max_span_width)
+            self.coref_model = None
+        else:
+            config = coref_model.config.duplicate()
+            dataset_reader_params = config['dataset_reader']
+            self.dataset_reader = allennlp.data.DatasetReader.from_params(dataset_reader_params)
+
+            self.coref_model = coref_model.model
+            self.coref_model.eval()
 
     def make_document(self, docid, tok_src, tok_tgt):
-        return Document(docid, self.instance_builder.text_to_instance(tok_src))
+        instance = self.dataset_reader.text_to_instance(tok_src)
+        if self.coref_model is not None:
+            coref_pred = self.coref_model.forward_on_instance(instance)
+            top_spans = coref_pred['top_spans']
+            top_span_embeddings = torch.from_numpy(coref_pred['top_span_embeddings'])
+            clusters = coref_pred['clusters']
+            top_span_dict = {tuple(top_spans[i, :]): i for i in range(top_spans.shape[0])}
+            cluster_embeddings = [torch.stack([top_span_embeddings[top_span_dict[s], :] for s in cl])
+                                  for cl in clusters]
+            spans_in_cluster = list(sorted(s for c in clusters for s in c))
+            span_to_cluster = {s: i for i, c in enumerate(clusters) for s in c}
+            snt_start = 0
+            coref_per_snt = []
+            for snt in tok_src:
+                active_clusters = collections.defaultdict(list)
+                snt_end = snt_start + len(snt)
+                while spans_in_cluster and snt_start <= spans_in_cluster[0][0] < snt_end:
+                    span = spans_in_cluster.pop(0)
+                    active_clusters[span_to_cluster[span]].append(tuple(pos - snt_start for pos in span))
+                coref_list = []
+                for cluster_id, spans in active_clusters.items():
+                    coref_list.append((spans, cluster_embeddings[cluster_id]))
+                coref_per_snt.append(coref_list)
+                snt_start = snt_end
+        else:
+            coref_per_snt = None
+
+        return Document(docid, instance, coref_per_snt)
 
 
 class Document:
-    def __init__(self, docid, instance):
+    def __init__(self, docid, instance, coref_per_snt):
         self.docid = docid
         self.instance = instance
+        self.coref_per_snt = coref_per_snt
 
 
 def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
                           use_filter_pred=True, src_seq_length=50, tgt_seq_length=50,
-                          src_lang='en', tgt_lang='fr'):
+                          src_lang='en', tgt_lang='fr', run_coref=None):
     spacy_src = spacy.load(src_lang, disable=['parser', 'tagger', 'ner'])
     spacy_tgt = spacy.load(tgt_lang, disable=['parser', 'tagger', 'ner'])
 
@@ -129,7 +167,7 @@ def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
     examples = []
 
     fields = CorefDataset.get_fields()
-    doc_builder = DocumentBuilder()
+    doc_builder = DocumentBuilder(run_coref)
 
     def filter_pred(example):
         """ ? """
