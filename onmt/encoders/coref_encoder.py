@@ -78,7 +78,7 @@ def _aggregate_chains(batch_size, ctx_out, chain_map, mask):
 
     out = torch.stack(out_list, dim=0)
     # In the next line, torch.eq(...) is a workaround for the lack of torch.isinf in my version of torch
-    return torch.where(torch.eq(out + 1, out), torch.zeros(1), out)
+    return torch.where(torch.eq(out + 1, out), torch.zeros(1, device=ctx_out.device), out)
 
 
 class CorefTransformerEncoder(onmt.encoders.encoder.EncoderBase):
