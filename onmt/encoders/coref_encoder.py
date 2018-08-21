@@ -69,8 +69,8 @@ class CorefTransformerLayer(torch.nn.Module):
 
 
 def _aggregate_chains(batch_size, ctx_out, chain_map, mask):
-    out_list = [torch.full(ctx_out.shape[1:], float('-inf'))] * batch_size
-    minus_inf = torch.tensor([float('-inf')])
+    out_list = [torch.full(ctx_out.shape[1:], float('-inf'), device=ctx_out.device)] * batch_size
+    minus_inf = torch.tensor([float('-inf')], device=ctx_out.device)
     for i in range(ctx_out.shape[0]):
         ex_idx = chain_map[i]
         masked = torch.where(mask[i, :, 0].unsqueeze(1), ctx_out[i, :], minus_inf)
