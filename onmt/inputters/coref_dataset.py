@@ -13,6 +13,54 @@ import allennlp.data
 from onmt.inputters.dataset_base import (DatasetBase, PAD_WORD, BOS_WORD, EOS_WORD)
 
 
+class CorefField(torchtext.data.RawField):
+    vocab_cls = torchtext.vocab.Vocab
+    sequential = True
+
+    def __init__(self, *args, **kwargs):
+        super(CorefField, self).__init__()
+        self.src_field = torchtext.data.Field(*args, **kwargs)
+        self.unk_token = self.src_field.unk_token
+        self.pad_token = self.src_field.pad_token
+        self.init_token = self.src_field.init_token
+        self.eos_token = self.src_field.eos_token
+        self.vocab = None
+        self.span_emb_size = 1220
+
+    @property
+    def vocab(self):
+        return self.src_field.vocab
+
+    @vocab.setter
+    def vocab(self, value):
+        self.src_field.vocab = value
+
+    def preprocess(self, example):
+        src, coref = example
+        return self.src_field.preprocess(src), coref
+
+    def process(self, batch, device=-1):
+        src_batch = self.src_field.process([x[0] for x in batch], device=device)
+
+        pad_len = src_batch[0].shape[0]
+
+        total_chains = sum((len(x[1]) for x in batch if len(x[1]) > 0))
+        max_chain_length = max((y[1].shape[0] for x in batch for y in x[1]), default=0)
+        mask = torch.zeros(total_chains, pad_len, max_chain_length).byte()
+        span_embeddings = torch.empty(total_chains, max_chain_length, self.span_emb_size)
+        chain_map = torch.zeros(total_chains).long()
+        k = 0
+        for i, ex in enumerate(batch):
+            for spans, emb in ex[1]:
+                chain_map[k] = i
+                span_embeddings[k, :emb.shape[0], :] = emb
+                for span in spans:
+                    mask[k, span[0]:span[1] + 1, :emb.shape[0]] = 1
+                k += 1
+
+        return src_batch, (chain_map, span_embeddings, mask)
+
+
 class CorefDataset(DatasetBase):
     """ Dataset for data_type=='coref'
 
@@ -34,6 +82,9 @@ class CorefDataset(DatasetBase):
             use_filter_pred (bool): use a custom filter predicate to filter
                 out examples?
     """
+
+    n_src_feats = 0
+    n_tgt_feats = 0
 
     def __init__(self, examples, fields, filter_pred):
         super(CorefDataset, self).__init__(examples, fields, filter_pred)
@@ -60,9 +111,7 @@ class CorefDataset(DatasetBase):
         """
         fields = {}
 
-        fields["src"] = torchtext.data.Field(
-            pad_token=PAD_WORD,
-            include_lengths=True)
+        fields["src"] = CorefField(pad_token=PAD_WORD, include_lengths=True)
 
         fields["tgt"] = torchtext.data.Field(
             init_token=BOS_WORD, eos_token=EOS_WORD,
@@ -181,12 +230,13 @@ def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
         tok_tgt = [[t.text for t in spacy_tgt(snt_tgt.rstrip('\n'))] for _, _, snt_tgt in l_doc_in]
         doc = doc_builder.make_document(docid.rstrip('\n'), tok_src, tok_tgt)
 
-        for s, t in zip(tok_src, tok_tgt):
+        for i, (s, t) in enumerate(zip(tok_src, tok_tgt)):
             ex = torchtext.data.Example()
-            ex.src = fields['src'].preprocess(s)
+            ex.src = fields['src'].preprocess((s, doc.coref_per_snt[i]))
             ex.tgt = fields['tgt'].preprocess(t)
             ex.indices = fields['indices'].preprocess(index_in_shard)
-            ex.doc = doc
+            ex.docid = doc.docid
+            ex.snt_in_doc = i
             examples.append(ex)
             index_in_shard += 1
 
@@ -200,4 +250,5 @@ def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
 
     if examples:
         yield CorefDataset(examples, fields, filter_pred)
+
 

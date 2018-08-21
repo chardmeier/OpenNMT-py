@@ -15,6 +15,7 @@ from onmt.encoders.cnn_encoder import CNNEncoder
 from onmt.encoders.mean_encoder import MeanEncoder
 from onmt.encoders.audio_encoder import AudioEncoder
 from onmt.encoders.image_encoder import ImageEncoder
+from coref_encoder import CorefTransformerEncoder
 
 from onmt.decoders.decoder import InputFeedRNNDecoder, StdRNNDecoder
 from onmt.decoders.transformer import TransformerDecoder
@@ -71,6 +72,10 @@ def build_encoder(opt, embeddings):
         return TransformerEncoder(opt.enc_layers, opt.rnn_size,
                                   opt.heads, opt.transformer_ff,
                                   opt.dropout, embeddings)
+    elif opt.encoder_type == "coref_transformer":
+        return CorefTransformerEncoder(opt.enc_layers, opt.rnn_size, opt.span_emb_size,
+                                       opt.heads, opt.transformer_ff,
+                                       opt.dropout, embeddings)
     elif opt.encoder_type == "cnn":
         return CNNEncoder(opt.enc_layers, opt.rnn_size,
                           opt.cnn_kernel_width,

@@ -15,6 +15,7 @@ from onmt.inputters.dataset_base import UNK_WORD, PAD_WORD, BOS_WORD, EOS_WORD
 from onmt.inputters.text_dataset import TextDataset
 from onmt.inputters.image_dataset import ImageDataset
 from onmt.inputters.audio_dataset import AudioDataset
+from onmt.inputters.coref_dataset import CorefDataset
 from onmt.utils.logging import logger
 
 
@@ -50,6 +51,8 @@ def get_fields(data_type, n_src_features, n_tgt_features):
         return ImageDataset.get_fields(n_src_features, n_tgt_features)
     elif data_type == 'audio':
         return AudioDataset.get_fields(n_src_features, n_tgt_features)
+    elif data_type == 'coref':
+        return CorefDataset.get_fields()
     else:
         raise ValueError("Data type not implemented")
 
@@ -75,7 +78,7 @@ def save_fields_to_vocab(fields):
     """
     vocab = []
     for k, f in fields.items():
-        if f is not None and 'vocab' in f.__dict__:
+        if f is not None and 'vocab' in dir(f):
             f.vocab.stoi = f.vocab.stoi
             vocab.append((k, f.vocab))
     return vocab
@@ -134,6 +137,11 @@ def make_features(batch, side, data_type='text'):
         of size (len x batch).
     """
     assert side in ['src', 'tgt']
+
+    if data_type == 'coref' and side == 'src':
+        src, coref = batch.src
+        return src[0].unsqueeze(2), coref
+
     if isinstance(batch.__dict__[side], tuple):
         data = batch.__dict__[side][0]
     else:
@@ -291,6 +299,13 @@ def build_vocab(train_dataset_files, fields, data_type, share_vocab,
     Returns:
         Dict of Fields
     """
+    if data_type == 'coref':
+        def get_src(x):
+            return x[0]
+    else:
+        def get_src(x):
+            return x
+
     counter = {}
     for k in fields:
         counter[k] = Counter()
@@ -307,8 +322,11 @@ def build_vocab(train_dataset_files, fields, data_type, share_vocab,
                 val = getattr(ex, k, None)
                 if val is not None and not fields[k].sequential:
                     val = [val]
-                elif k == 'src' and src_vocab:
-                    val = [item for item in val if item in src_vocab]
+                elif k == 'src':
+                    if src_vocab:
+                        val = [item for item in get_src(val) if item in src_vocab]
+                    else:
+                        val = get_src(val)
                 elif k == 'tgt' and tgt_vocab:
                     val = [item for item in val if item in tgt_vocab]
                 counter[k].update(val)
@@ -326,7 +344,7 @@ def build_vocab(train_dataset_files, fields, data_type, share_vocab,
         logger.info(" * %s vocab size: %d." % (key,
                                                len(fields[key].vocab)))
 
-    if data_type == 'text':
+    if data_type in ('text', 'coref'):
         _build_field_vocab(fields["src"], counter["src"],
                            max_size=src_vocab_size,
                            min_freq=src_words_min_frequency)
