@@ -65,15 +65,14 @@ def main():
         coref_model = None
 
     logger.info('Processing training corpus.')
-    # train_dataset_files = process_corpus('train', args.save, args.train[0], args.train[1], args.train[2],
-    #                                      args.shard_size,
-    #                                      run_coref=coref_model)
+    train_dataset_files = process_corpus('train', args.save, args.train[0], args.train[1], args.train[2],
+                                         args.shard_size,
+                                         run_coref=coref_model)
 
     logger.info('Processing validation corpus.')
-    # process_corpus('valid', args.save, args.valid[0], args.valid[1], args.valid[2], args.shard_size,
-    #                run_coref=coref_model)
+    process_corpus('valid', args.save, args.valid[0], args.valid[1], args.valid[2], args.shard_size,
+                   run_coref=coref_model)
 
-    train_dataset_files = ['/tmp/corefds.train.0.pt']
     logger.info("Building & saving vocabulary...")
     fields = CorefDataset.get_fields()
 
