@@ -46,9 +46,9 @@ class CorefField(torchtext.data.RawField):
 
         total_chains = sum((len(x[1]) for x in batch if len(x[1]) > 0))
         max_chain_length = max((y[1].shape[0] for x in batch for y in x[1]), default=0)
-        mask = torch.zeros(total_chains, pad_len, max_chain_length).byte()
-        span_embeddings = torch.empty(total_chains, max_chain_length, self.span_emb_size)
-        chain_map = torch.zeros(total_chains).long()
+        mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
+        span_embeddings = torch.empty(total_chains, max_chain_length, self.span_emb_size, device=device)
+        chain_map = torch.zeros(total_chains, device=device, dtype=torch.long)
         k = 0
         for i, ex in enumerate(batch):
             for spans, emb in ex[1]:
