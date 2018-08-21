@@ -226,6 +226,8 @@ def train_opts(parser):
     """ Training and saving options """
 
     group = parser.add_argument_group('General')
+    group.add_argument('-debug', type=int,
+                       help="Connect to debug server at given port number")
     group.add_argument('-data', required=True,
                        help="""Path prefix to the ".train.pt" and
                        ".valid.pt" file path from preprocess.py""")

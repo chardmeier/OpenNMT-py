@@ -34,4 +34,9 @@ if __name__ == "__main__":
     opts.train_opts(parser)
 
     opt = parser.parse_args()
+
+    if opt.debug:
+        import pydevd
+        pydevd.settrace('localhost', port=21000, stdoutToServer=True, stderrToServer=True)
+
     main(opt)
