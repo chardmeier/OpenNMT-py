@@ -54,7 +54,7 @@ def model_opts(parser):
                        Options are [text|img|audio].""")
 
     group.add_argument('-encoder_type', type=str, default='rnn',
-                       choices=['rnn', 'brnn', 'mean', 'transformer', 'cnn'],
+                       choices=['rnn', 'brnn', 'mean', 'transformer', 'coref_transformer', 'cnn'],
                        help="""Type of encoder layer to use. Non-RNN layers
                        are experimental. Options are
                        [rnn|brnn|mean|transformer|cnn].""")
@@ -72,6 +72,8 @@ def model_opts(parser):
                        help='Number of layers in the decoder')
     group.add_argument('-rnn_size', type=int, default=500,
                        help='Size of rnn hidden states')
+    group.add_argument('-span_emb_size', type=int, default=1220,
+                       help='Size of coref model span embeddings')
     group.add_argument('-cnn_kernel_width', type=int, default=3,
                        help="""Size of windows in the cnn, the kernel_size is
                        (cnn_kernel_width, 1) in conv layer""")

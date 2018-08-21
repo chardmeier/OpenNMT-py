@@ -43,8 +43,15 @@ class NMTModel(nn.Module):
         tgt = tgt[:-1]  # exclude last target from inputs
 
         enc_final, memory_bank = self.encoder(src, lengths)
+
+        if isinstance(src, tuple):
+            # coref src has extra information
+            src_text = src[0]
+        else:
+            src_text = src
         enc_state = \
-            self.decoder.init_decoder_state(src, memory_bank, enc_final)
+            self.decoder.init_decoder_state(src_text, memory_bank, enc_final)
+
         decoder_outputs, dec_state, attns = \
             self.decoder(tgt, memory_bank,
                          enc_state if dec_state is None
