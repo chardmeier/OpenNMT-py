@@ -8,7 +8,7 @@ from onmt.utils.logging import logger, init_logger
 from onmt.inputters.coref_dataset import CorefDataset, create_coref_datasets
 
 
-def openfile(fname, mode='r'):
+def openfile(fname, mode='rt'):
     if fname.endswith('.gz'):
         return gzip.open(fname, mode, encoding='utf-8')
     else:
