@@ -53,5 +53,5 @@ def mem_report():
     cuda_tensors = [t for t in tensors if t.is_cuda]
     host_tensors = [t for t in tensors if not t.is_cuda]
     _mem_report(cuda_tensors, 'GPU')
-    _mem_report(host_tensors, 'CPU')
+    # _mem_report(host_tensors, 'CPU')
     print('=' * LEN)
