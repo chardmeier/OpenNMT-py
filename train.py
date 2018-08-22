@@ -37,6 +37,6 @@ if __name__ == "__main__":
 
     if opt.debug:
         import pydevd
-        pydevd.settrace('localhost', port=21000, stdoutToServer=True, stderrToServer=True)
+        pydevd.settrace('localhost', port=opt.debug, stdoutToServer=True, stderrToServer=True)
 
     main(opt)
