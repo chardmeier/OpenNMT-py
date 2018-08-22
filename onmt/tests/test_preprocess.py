@@ -41,7 +41,7 @@ class TestData(unittest.TestCase):
         self.opt = opt
 
     def dataset_build(self, opt):
-        fields = onmt.inputters.get_fields("text", 0, 0)
+        fields = onmt.inputters.get_fields("text", 0, 0, None)
 
         if hasattr(opt, 'src_vocab') and len(opt.src_vocab) > 0:
             with codecs.open(opt.src_vocab, 'w', 'utf-8') as f:

@@ -74,7 +74,7 @@ def main():
                    run_coref=coref_model)
 
     logger.info("Building & saving vocabulary...")
-    fields = CorefDataset.get_fields()
+    fields = CorefDataset.get_fields(1000, 1000)
 
     fields = onmt.inputters.build_vocab(train_dataset_files, fields, 'coref',
                                         args.share_vocab,

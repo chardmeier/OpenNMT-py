@@ -134,7 +134,7 @@ def load_test_model(opt, dummy_opt):
     checkpoint = torch.load(opt.model,
                             map_location=lambda storage, loc: storage)
     fields = inputters.load_fields_from_vocab(
-        checkpoint['vocab'], data_type=opt.data_type)
+        checkpoint['vocab'], opt, data_type=opt.data_type)
 
     model_opt = checkpoint['opt']
     for arg in dummy_opt:

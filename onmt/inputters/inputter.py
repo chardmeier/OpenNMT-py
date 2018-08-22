@@ -32,7 +32,7 @@ torchtext.vocab.Vocab.__getstate__ = _getstate
 torchtext.vocab.Vocab.__setstate__ = _setstate
 
 
-def get_fields(data_type, n_src_features, n_tgt_features):
+def get_fields(data_type, n_src_features, n_tgt_features, opt):
     """
     Args:
         data_type: type of the source input. Options are [text|img|audio].
@@ -40,6 +40,7 @@ def get_fields(data_type, n_src_features, n_tgt_features):
             create `torchtext.data.Field` for.
         n_tgt_features: the number of target features to
             create `torchtext.data.Field` for.
+        opt: Command-line options
 
     Returns:
         A dictionary whose keys are strings and whose values are the
@@ -52,19 +53,19 @@ def get_fields(data_type, n_src_features, n_tgt_features):
     elif data_type == 'audio':
         return AudioDataset.get_fields(n_src_features, n_tgt_features)
     elif data_type == 'coref':
-        return CorefDataset.get_fields()
+        return CorefDataset.get_fields(opt.max_mentions_before, opt.max_mentions_after)
     else:
         raise ValueError("Data type not implemented")
 
 
-def load_fields_from_vocab(vocab, data_type="text"):
+def load_fields_from_vocab(vocab, opt, data_type="text"):
     """
     Load Field objects from `vocab.pt` file.
     """
     vocab = dict(vocab)
     n_src_features = len(collect_features(vocab, 'src'))
     n_tgt_features = len(collect_features(vocab, 'tgt'))
-    fields = get_fields(data_type, n_src_features, n_tgt_features)
+    fields = get_fields(data_type, n_src_features, n_tgt_features, opt)
     for k, v in vocab.items():
         # Hack. Can't pickle defaultdict :(
         v.stoi = defaultdict(lambda: 0, v.stoi)
@@ -554,10 +555,10 @@ def _load_fields(dataset, data_type, opt, checkpoint):
     if checkpoint is not None:
         logger.info('Loading vocab from checkpoint at %s.' % opt.train_from)
         fields = load_fields_from_vocab(
-            checkpoint['vocab'], data_type)
+            checkpoint['vocab'], opt, data_type=data_type)
     else:
         fields = load_fields_from_vocab(
-            torch.load(opt.data + '.vocab.pt'), data_type)
+            torch.load(opt.data + '.vocab.pt'), opt, data_type=data_type)
     fields = dict([(k, f) for (k, f) in fields.items()
                    if k in dataset.examples[0].__dict__])
 

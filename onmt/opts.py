@@ -128,6 +128,12 @@ def model_opts(parser):
     group.add_argument('-lambda_coverage', type=float, default=1,
                        help='Lambda value for coverage.')
 
+    group = parser.add_argument_group('Coref-MT')
+    group.add_argument('-max_mentions_before', type=int, default=1000,
+                       help='Maximum of preceding mentions to consider.')
+    group.add_argument('-max_mentions_after', type=int, default=1000,
+                       help='Maximum of following mentions to consider.')
+
 
 def preprocess_opts(parser):
     """ Pre-procesing options """

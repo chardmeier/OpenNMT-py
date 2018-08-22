@@ -19,6 +19,10 @@ class CorefField(torchtext.data.RawField):
 
     def __init__(self, *args, **kwargs):
         super(CorefField, self).__init__()
+
+        self.max_mentions_before = kwargs.pop('max_mentions_before', 1000)
+        self.max_mentions_after = kwargs.pop('max_mentions_after', 1000)
+
         self.src_field = torchtext.data.Field(*args, **kwargs)
         self.unk_token = self.src_field.unk_token
         self.pad_token = self.src_field.pad_token
@@ -44,19 +48,35 @@ class CorefField(torchtext.data.RawField):
 
         pad_len = src_batch[0].shape[0]
 
-        total_chains = sum((len(x[1]) for x in batch if len(x[1]) > 0))
-        max_chain_length = max((y[1].shape[0] for x in batch for y in x[1]), default=0)
-        mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
-        span_embeddings = torch.empty(total_chains, max_chain_length, self.span_emb_size, device=device)
-        chain_map = torch.zeros(total_chains, device=device, dtype=torch.long)
-        k = 0
+        l_chain_map = []
+        l_span_embeddings = []
+        l_mask = []
+
+        total_chains = 0
         for i, ex in enumerate(batch):
+            total_chains += len(ex[1])
             for spans, emb in ex[1]:
-                chain_map[k] = i
-                span_embeddings[k, :emb.shape[0], :] = emb
-                for span in spans:
-                    mask[k, span[0]:span[1] + 1, :emb.shape[0]] = 1
-                k += 1
+                chain_length = emb.shape[0]
+                min_pos_in_cluster = min(s[1] for s in spans)
+                max_pos_in_cluster = max(s[1] for s in spans)
+                emb_from = max(0, min_pos_in_cluster - self.max_mentions_before)
+                emb_to = min(chain_length, max_pos_in_cluster + self.max_mentions_after)
+
+                l_chain_map.append(i)
+                l_span_embeddings.append(emb[emb_from:emb_to, :])
+                snt_mask = torch.zeros(pad_len, dtype=torch.uint8)
+                for span, pos_in_cluster in spans:
+                    snt_mask[span[0]:span[1] + 1] = 1
+                l_mask.append(snt_mask)
+
+        max_chain_length = max(emb.shape[1] for emb in l_span_embeddings)
+        chain_map = torch.tensor(l_chain_map, device=device, dtype=torch.long)
+        span_embeddings = torch.zeros(total_chains, max_chain_length, self.span_emb_size, device=device)
+        mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
+
+        for i, (emb, snt_mask) in enumerate(zip(l_span_embeddings, l_mask)):
+            span_embeddings[i, :emb.shape[0], :] = emb
+            mask[i, snt_mask, :emb.shape[0]] = 1
 
         return src_batch, (chain_map, span_embeddings, mask)
 
@@ -103,7 +123,7 @@ class CorefDataset(DatasetBase):
         raise NotImplementedError
 
     @staticmethod
-    def get_fields():
+    def get_fields(max_mentions_before, max_mentions_after):
         """
         Returns:
             A dictionary whose keys are strings and whose values
@@ -111,7 +131,9 @@ class CorefDataset(DatasetBase):
         """
         fields = {}
 
-        fields["src"] = CorefField(pad_token=PAD_WORD, include_lengths=True)
+        fields["src"] = CorefField(pad_token=PAD_WORD, include_lengths=True,
+                                   max_mentions_before=max_mentions_before,
+                                   max_mentions_after=max_mentions_after)
 
         fields["tgt"] = torchtext.data.Field(
             init_token=BOS_WORD, eos_token=EOS_WORD,
@@ -178,7 +200,7 @@ class DocumentBuilder:
             cluster_embeddings = [torch.stack([top_span_embeddings[top_span_dict[s], :] for s in cl])
                                   for cl in clusters]
             spans_in_cluster = list(sorted(s for c in clusters for s in c))
-            span_to_cluster = {s: i for i, c in enumerate(clusters) for s in c}
+            span_to_cluster = {s: (i, j) for i, c in enumerate(clusters) for j, s in enumerate(c)}
             snt_start = 0
             coref_per_snt = []
             for snt in tok_src:
@@ -186,7 +208,8 @@ class DocumentBuilder:
                 snt_end = snt_start + len(snt)
                 while spans_in_cluster and snt_start <= spans_in_cluster[0][0] < snt_end:
                     span = spans_in_cluster.pop(0)
-                    active_clusters[span_to_cluster[span]].append(tuple(pos - snt_start for pos in span))
+                    cluster_id, pos_in_cluster = span_to_cluster[span]
+                    active_clusters[cluster_id].append((tuple(pos - snt_start for pos in span), pos_in_cluster))
                 coref_list = []
                 for cluster_id, spans in active_clusters.items():
                     coref_list.append((spans, cluster_embeddings[cluster_id]))
@@ -215,7 +238,7 @@ def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
     index_in_shard = 0
     examples = []
 
-    fields = CorefDataset.get_fields()
+    fields = CorefDataset.get_fields(1000, 1000)
     doc_builder = DocumentBuilder(run_coref)
 
     def filter_pred(example):

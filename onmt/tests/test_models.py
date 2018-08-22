@@ -30,7 +30,7 @@ class TestModel(unittest.TestCase):
     # Helper to generate a vocabulary
 
     def get_vocab(self):
-        src = onmt.inputters.get_fields("text", 0, 0)["src"]
+        src = onmt.inputters.get_fields("text", 0, 0, None)["src"]
         src.build_vocab([])
         return src.vocab
 
