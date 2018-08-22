@@ -76,3 +76,8 @@ python OpenNMT-py/train.py -gpuid 0 \
 Here, `data_prefix` is the pointer to where the preprocessed data files are
 stored, and model_path is the prefix for saving the model.
 
+TODO
+----
+
+- Fix GPU memory problems.
+- Implement positional embeddings for members of coreference chains.
