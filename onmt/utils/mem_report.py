@@ -1,3 +1,4 @@
+import collections
 import gc
 import torch
 
@@ -20,6 +21,7 @@ def mem_report():
         total_numel = 0
         total_mem = 0
         visited_data = []
+        objlist = collections.defaultdict(lambda: 0)
         for tensor in tensors:
             if tensor.is_sparse:
                 continue
@@ -37,10 +39,9 @@ def mem_report():
             element_type = type(tensor).__name__
             size = tuple(tensor.size())
 
-            print('%s\t\t%s\t\t%.2f' % (
-                element_type,
-                size,
-                mem))
+            objlist[(str(element_type), size, mem)] += 1
+        for (el_type, size, mem), cnt in sorted(objlist).items():
+            print('%20s  %15s  %5s x %6.2f = %6.2f' % (el_type, str(size), cnt, mem, cnt * mem))
         print('-' * LEN)
         print('Total Tensors: %d \tUsed Memory Space: %.2f MBytes' % (total_numel, total_mem))
         print('-' * LEN)
