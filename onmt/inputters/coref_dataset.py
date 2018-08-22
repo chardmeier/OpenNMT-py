@@ -69,7 +69,7 @@ class CorefField(torchtext.data.RawField):
                     snt_mask[span[0]:span[1] + 1] = 1
                 l_mask.append(snt_mask)
 
-        max_chain_length = max(emb.shape[1] for emb in l_span_embeddings)
+        max_chain_length = max(emb.shape[0] for emb in l_span_embeddings)
         chain_map = torch.tensor(l_chain_map, device=device, dtype=torch.long)
         span_embeddings = torch.zeros(total_chains, max_chain_length, self.span_emb_size, device=device)
         mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
