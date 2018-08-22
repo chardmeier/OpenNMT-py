@@ -59,9 +59,7 @@ The NMT training is launched with the standard _OpenNMT_ `train.py` script,
 using an encoder type of `coref_transformer`. According to the [_OpenNMT_
 FAQ](http://opennmt.net/OpenNMT-py/FAQ.html), the transformer model is
 very sensitive to hyperparameters. The hyperparameter values below are taken
-from there and should correspond to those used by Vaswani et al., except
-for using a gradient accumulation interval (`-accum_count`) of 3 instead of 4
-to avoid GPU out of memory errors.
+from there and should correspond to those used by Vaswani et al.
 
 ```
 python OpenNMT-py/train.py -gpuid 0 \
@@ -70,7 +68,7 @@ python OpenNMT-py/train.py -gpuid 0 \
         -encoder_type coref_transformer -decoder_type transformer -position_encoding \
         -train_steps 100000 -max_generator_batches 32 -dropout 0.1 \
         -batch_size 4096 -batch_type tokens -normalization tokens \
-        -accum_count 3 -optim adam -adam_beta2 0.998 -decay_method noam \
+        -accum_count 4 -optim adam -adam_beta2 0.998 -decay_method noam \
         -warmup_steps 8000 -learning_rate 2 -max_grad_norm 0 \
         -param_init 0 -param_init_glorot -label_smoothing 0.1
 ```
