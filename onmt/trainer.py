@@ -15,6 +15,7 @@ import onmt.inputters as inputters
 import onmt.utils
 
 from onmt.utils.logging import logger
+from onmt.utils.mem_report import mem_report
 
 
 def build_trainer(opt, model, fields, optim, data_type, model_saver=None):
@@ -142,6 +143,8 @@ class Trainer(object):
             reduce_counter = 0
             for i, batch in enumerate(train_iter):
                 if self.n_gpu == 0 or (i % self.n_gpu == self.gpu_rank):
+                    mem_report()
+
                     if self.gpu_verbose_level > 1:
                         logger.info("GpuRank %d: index: %d accum: %d"
                                     % (self.gpu_rank, i, accum))
