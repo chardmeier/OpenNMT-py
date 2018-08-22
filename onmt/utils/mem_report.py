@@ -40,7 +40,7 @@ def mem_report():
             size = tuple(tensor.size())
 
             objlist[(str(element_type), size, mem)] += 1
-        for (el_type, size, mem), cnt in sorted(objlist).items():
+        for (el_type, size, mem), cnt in sorted(objlist.items()):
             print('%20s  %15s  %5s x %6.2f = %6.2f' % (el_type, str(size), cnt, mem, cnt * mem))
         print('-' * LEN)
         print('Total Tensors: %d \tUsed Memory Space: %.2f MBytes' % (total_numel, total_mem))
