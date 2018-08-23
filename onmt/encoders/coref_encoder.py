@@ -60,16 +60,16 @@ class CorefTransformerLayer(torch.nn.Module):
         attn_context, _ = self.self_attn(input_norm, input_norm, input_norm, mask=mask)
 
         # Now the coref-specific parts.
-        chain_map, span_embeddings, mask = context
+        chain_map, span_embeddings, chain_mask = context
 
         # Linearly map span embeddings from the size used by AllenNLP to our model size.
         emb_transformed = self.linear_context(span_embeddings)
         # Multiply input rows so that we have one instance of the sentence for each chain referred to
         context_query = torch.index_select(input_norm, 0, chain_map)
         # Attention to vectors in coref chain
-        ctx_out, _ = self.context_attn(emb_transformed, emb_transformed, context_query, mask=mask)
+        ctx_out, _ = self.context_attn(emb_transformed, emb_transformed, context_query, mask=chain_mask)
         # Reduce output so we get one row per example again
-        ctx_context = _aggregate_chains(input_norm.shape[0], ctx_out, chain_map, mask)
+        ctx_context = _aggregate_chains(input_norm.shape[0], ctx_out, chain_map, chain_mask)
 
         # Gate to choose between coref attention and self-attention
         gated_context = self.attn_gate(attn_context, ctx_context)
