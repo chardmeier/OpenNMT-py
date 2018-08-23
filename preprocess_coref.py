@@ -18,6 +18,7 @@ def openfile(fname, mode='rt'):
 def process_corpus(corpus_type, file_stem, corpus_files, shard_size, run_coref=None):
     ds_files = []
     for src, tgt, docids in corpus_files:
+        logger.info("Processing corpus %s" % src)
         with openfile(src) as f_src, openfile(tgt) as f_tgt, openfile(docids) as f_docids:
             for index, dataset in enumerate(create_coref_datasets(f_src, f_tgt, f_docids, shard_size,
                                                                   run_coref=run_coref)):
