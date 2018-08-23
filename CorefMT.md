@@ -63,6 +63,7 @@ from there and should correspond to those used by Vaswani et al.
 
 ```
 python OpenNMT-py/train.py -gpuid 0 \
+        -valid_steps 5000 \
         -data data_prefix -save_model model_path \
         -layers 6 -rnn_size 512 -word_vec_size 512 \
         -encoder_type coref_transformer -decoder_type transformer -position_encoding \
