@@ -79,7 +79,7 @@ class CorefField(torchtext.data.RawField):
                 l_chain_start.append(min_pos_in_cluster)
                 l_span_embeddings.append(emb[emb_from:emb_to, :])
                 snt_mask = torch.zeros(pad_len, dtype=torch.uint8)
-                snt_mention_pos_in_chain = torch.full((pad_len,), -1, dtype=torch.long)
+                snt_mention_pos_in_chain = torch.full((pad_len,), -1, device=device, dtype=torch.long)
                 for span, pos_in_chain in spans:
                     snt_mask[span[0]:span[1] + 1] = 1
                     snt_mention_pos_in_chain[span[0]:span[1] + 1] = pos_in_chain
@@ -89,7 +89,7 @@ class CorefField(torchtext.data.RawField):
         max_chain_length = max(emb.shape[0] for emb in l_span_embeddings)
         chain_map = torch.tensor(l_chain_map, device=device, dtype=torch.long)
         chain_start = torch.tensor(l_chain_start, device=device, dtype=torch.long)
-        mention_pos_in_chain = torch.tensor(l_mention_pos_in_chain, device=device, dtype=torch.long)
+        mention_pos_in_chain = torch.stack(l_mention_pos_in_chain, 0)
         span_embeddings = torch.zeros(total_chains, max_chain_length, self.span_emb_size, device=device)
         attention_mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
 
