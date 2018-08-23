@@ -60,6 +60,7 @@ class CorefTransformerLayer(torch.nn.Module):
         attn_context, _ = self.self_attn(input_norm, input_norm, input_norm, mask=mask)
 
         # Now the coref-specific parts.
+        # See `onmt.inputters.coref_dataset.CorefField` for a description of what these elements look like.
         chain_map, span_embeddings, chain_mask = context
 
         # Linearly map span embeddings from the size used by AllenNLP to our model size.
