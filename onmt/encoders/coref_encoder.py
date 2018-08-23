@@ -31,16 +31,16 @@ class CorefPositionalEncoding(torch.nn.Module):
         self.register_buffer('pe', pe)
         self.dim = dim
 
-    def forward(self, emb, steps, mode):
+    def forward(self, mode, emb, steps):
         """
         Add positional encoding to input vector. In mode 'chain', the input embeddings have dimensions
         `[chain_length x model_dim]` and steps is a 1D vector of dimension `[chain_length]`. In mode
         'query', the input embeddings have dimension `[nchains x sentence_length x model_dim]` and steps
         is a matrix of dimension `[nchains x sentence_length]`, containing for each word belonging to the
         chain its position in the chain, or -1 for words that aren't part of a chain.
+        :param mode: (`str`) 'chain' or 'query'
         :param emb: (`FloatTensor`) Input embeddings
         :param steps: (`LongTensor`) Time steps to encode
-        :param mode: (`str`) 'chain' or 'query'
         :return: the sum of `emb` and the positional embeddings (same dimension as `emb`)
         """
         if mode == 'chain':
@@ -93,7 +93,7 @@ class CorefTransformerLayer(torch.nn.Module):
 
         Args:
             inputs (`FloatTensor`): `[batch_size x src_len x model_dim]`
-            context (`CorefContext`): the context required for coref processing
+            coref_context (`CorefContext`): the context required for coref processing
             mask (`LongTensor`): `[batch_size x src_len x src_len]`
 
         Returns:
@@ -110,8 +110,8 @@ class CorefTransformerLayer(torch.nn.Module):
         # Linearly map span embeddings from the size used by AllenNLP to our model size.
         emb_transformed = self.linear_context(coref_context.span_embeddings)
         # Add positional embeddings to span embeddings and query
-        emb_transformed = self.positional_embeddings(emb_transformed, pos_in_chain[:, 1:])
-        context_query = self.positional_embeddings(emb_transformed, pos_in_chain[:, 0])
+        emb_transformed = self.positional_embeddings('chain', emb_transformed, coref_context.chain_start)
+        context_query = self.positional_embeddings('query', input_norm, coref_context.mention_pos_in_chain)
         # Multiply input rows so that we have one instance of the sentence for each chain referred to
         context_query = torch.index_select(context_query, 0, coref_context.chain_map)
         # Attention to vectors in coref chain
