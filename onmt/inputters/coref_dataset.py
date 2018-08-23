@@ -44,6 +44,24 @@ class CorefField(torchtext.data.RawField):
         return self.src_field.preprocess(src), coref
 
     def process(self, batch, device=-1):
+        """
+        Convert batch of examples into tensor format.
+
+        :param batch (`torchtext.data.Batch`): input data
+        :param device (`torch.device`): device to create tensors on
+        :return: (`tuple(tuple(tensor, tensor), tuple(LongTensor, FloatTensor, ByteTensor))`)
+            The first element of the outer tuple is exactly the representation that OpenNMT would use for
+            data_type 'text', that is, a pair of a padded matrix with word indices and the associated
+            original sentence lengths. The second element contains the information relevant to the
+            coref-mt system:
+               chain_map (`LongTensor`): Mapping from coreference chains to examples in the batch `[total_chains]`
+               span_embeddings (`FloatTensor`): Span embeddings of the mentions in each chain
+                                                `[total_chains x max_chain_length x span_embedding_size]`
+               mask (`ByteTensor`): Binary mask indicating which elements of the embeddings tensor are relevant
+                                    for attention for each word position (i.e., mentions the word belongs to and
+                                    the actual length of each chain)
+                                    `[total_chains x sentence_length x max_chain_length]`
+        """
         src_batch = self.src_field.process([x[0] for x in batch], device=device)
 
         pad_len = src_batch[0].shape[0]

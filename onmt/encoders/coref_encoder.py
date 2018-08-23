@@ -69,6 +69,21 @@ class CorefTransformerLayer(torch.nn.Module):
 
 
 def _aggregate_chains(batch_size, ctx_out, chain_map, mask):
+    """
+    Merges the output of the context attention, which has one entry per coreference chain, into a single
+    entry per training example. For each word position that is part of a mention, we take the contribution
+    of the corresponding chain. If a mention belongs to multiple chains, we do max-pooling over all of
+    them.
+
+    :param batch_size (`int`): Number of examples (sentences) in the batch.
+    :param ctx_out (`FloatTensor`): Output of context attention
+           `[total_chains x sentence_length x span_embedding_size]`
+    :param chain_map (`LongTensor`): Mapping of coreference chains to examples `[total_chains]`
+    :param mask (`ByteTensor`): Binary mask indicating which chains a word belongs to and which
+           entries of ctx_out can be attended to.
+           `[total_chains x sentence_length x max_chain_length]`
+    :return: Per-sentence context attention matrix `[batch_size x sentence_length x span_embedding_size]`
+    """
     out_list = [torch.full(ctx_out.shape[1:], float('-inf'), device=ctx_out.device)] * batch_size
     minus_inf = torch.tensor([float('-inf')], device=ctx_out.device)
     for i in range(ctx_out.shape[0]):
