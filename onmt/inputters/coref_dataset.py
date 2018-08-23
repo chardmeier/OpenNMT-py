@@ -49,7 +49,7 @@ class CorefField(torchtext.data.RawField):
 
         :param batch (`torchtext.data.Batch`): input data
         :param device (`torch.device`): device to create tensors on
-        :return: (`tuple(tuple(tensor, tensor), tuple(LongTensor, FloatTensor, ByteTensor))`)
+        :return: (`tuple(tuple(tensor, tensor), tuple(LongTensor, FloatTensor, ByteTensor, LongTensor))`)
             The first element of the outer tuple is exactly the representation that OpenNMT would use for
             data_type 'text', that is, a pair of a padded matrix with word indices and the associated
             original sentence lengths. The second element contains the information relevant to the
@@ -61,6 +61,9 @@ class CorefField(torchtext.data.RawField):
                                     for attention for each word position (i.e., mentions the word belongs to and
                                     the actual length of each chain)
                                     `[total_chains x sentence_length x max_chain_length]`
+               pos_in_chain (`LongTensor`): Position in chain of the first associated mention in a sentence
+                                    and the positions of the first and last mentions of this chain included
+                                    in the span_embeddings tensor `[total_chains x 3]`
         """
         src_batch = self.src_field.process([x[0] for x in batch], device=device)
 
@@ -69,6 +72,7 @@ class CorefField(torchtext.data.RawField):
         l_chain_map = []
         l_span_embeddings = []
         l_mask = []
+        l_pos_in_cluster = []
 
         total_chains = 0
         for i, ex in enumerate(batch):
@@ -83,12 +87,14 @@ class CorefField(torchtext.data.RawField):
                 l_chain_map.append(i)
                 l_span_embeddings.append(emb[emb_from:emb_to, :])
                 snt_mask = torch.zeros(pad_len, dtype=torch.uint8)
-                for span, pos_in_cluster in spans:
+                for span, pos_in_chain in spans:
                     snt_mask[span[0]:span[1] + 1] = 1
                 l_mask.append(snt_mask)
+                l_pos_in_cluster.append([min_pos_in_cluster, emb_from, emb_to])
 
         max_chain_length = max(emb.shape[0] for emb in l_span_embeddings)
         chain_map = torch.tensor(l_chain_map, device=device, dtype=torch.long)
+        pos_in_chain = torch.tensor(l_pos_in_cluster, device=device, dtype=torch.long)
         span_embeddings = torch.zeros(total_chains, max_chain_length, self.span_emb_size, device=device)
         mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
 
@@ -96,7 +102,7 @@ class CorefField(torchtext.data.RawField):
             span_embeddings[i, :emb.shape[0], :] = emb
             mask[i, snt_mask, :emb.shape[0]] = 1
 
-        return src_batch, (chain_map, span_embeddings, mask)
+        return src_batch, (chain_map, span_embeddings, mask, pos_in_chain)
 
 
 class CorefDataset(DatasetBase):

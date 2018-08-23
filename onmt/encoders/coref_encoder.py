@@ -1,6 +1,10 @@
+import math
 import onmt
 import torch
 
+
+# The standard OpenNMT implementations of gates and positional embeddings do additional things we don't want,
+# therefore we provide our own basic versions of them.
 
 class SimpleGate(torch.nn.Module):
     def __init__(self, dim):
@@ -11,6 +15,50 @@ class SimpleGate(torch.nn.Module):
     def forward(self, in1, in2):
         z = self.sig(self.gate(torch.cat((in1, in2), dim=-1)))
         return z * in1 + (1.0 - z) * in2
+
+
+# mostly copied from onmt.modules.embeddings.PositionalEncoding
+class CorefPositionalEncoding(torch.nn.Module):
+    def __init__(self, dim, max_len=200):
+        super(CorefPositionalEncoding, self).__init__()
+        pe = torch.zeros(max_len, dim)
+        position = torch.arange(0, max_len).unsqueeze(1)
+        div_term = torch.exp((torch.arange(0, dim, 2) *
+                              -(math.log(10000.0) / dim)).float())
+        pe[:, 0::2] = torch.sin(position.float() * div_term)
+        pe[:, 1::2] = torch.cos(position.float() * div_term)
+        pe = pe.unsqueeze(1)
+        self.register_buffer('pe', pe)
+        self.dim = dim
+
+    def forward(self, emb, steps, mode):
+        """
+        Add positional encoding to input vector. In mode 'chain', the input embeddings have dimensions
+        `[chain_length x model_dim]` and steps is a 1D vector of dimension `[chain_length]`. In mode
+        'query', the input embeddings have dimension `[nchains x sentence_length x model_dim]` and steps
+        is a matrix of dimension `[nchains x sentence_length]`, containing for each word belonging to the
+        chain its position in the chain, or -1 for words that aren't part of a chain.
+        :param emb: (`FloatTensor`) Input embeddings
+        :param steps: (`LongTensor`) Time steps to encode
+        :param mode: (`str`) 'chain' or 'query'
+        :return: the sum of `emb` and the positional embeddings (same dimension as `emb`)
+        """
+        if mode == 'chain':
+            steps = steps.squeeze()
+            assert steps.ndimension() == 1
+            chain_length = emb.shape[1]
+            pe = self.pe[steps:steps + chain_length].unsqueeze(0)
+        elif mode == 'query':
+            assert steps.ndimension() == 2
+            nitems = emb.shape[0]
+            max_len = steps.shape[1]
+            pe = torch.where(steps >= 0,
+                             torch.gather(self.pe.expand(nitems, -1, -1), 1, steps.expand(-1, -1, self.dim)),
+                             torch.zeros(nitems, max_len, self.dim))
+        else:
+            raise ValueError('Unknown mode %s, should be chain or query.' % mode)
+
+        return emb + pe
 
 
 class CorefTransformerLayer(torch.nn.Module):
@@ -33,6 +81,7 @@ class CorefTransformerLayer(torch.nn.Module):
         self.linear_context = torch.nn.Linear(d_context, d_model, bias=True)
         self.context_attn = onmt.modules.MultiHeadedAttention(heads, d_model, dropout=dropout)
         self.attn_gate = SimpleGate(d_model)
+        self.positional_embeddings = CorefPositionalEncoding(self.d_model)
 
         self.feed_forward = onmt.modules.position_ffn.PositionwiseFeedForward(d_model, d_ff, dropout)
         self.layer_norm = onmt.modules.LayerNorm(d_model)
@@ -61,12 +110,15 @@ class CorefTransformerLayer(torch.nn.Module):
 
         # Now the coref-specific parts.
         # See `onmt.inputters.coref_dataset.CorefField` for a description of what these elements look like.
-        chain_map, span_embeddings, chain_mask = context
+        chain_map, span_embeddings, chain_mask, pos_in_chain = context
 
         # Linearly map span embeddings from the size used by AllenNLP to our model size.
         emb_transformed = self.linear_context(span_embeddings)
+        # Add positional embeddings to span embeddings and query
+        emb_transformed = self.positional_embeddings(emb_transformed, pos_in_chain[:, 1:])
+        context_query = self.positional_embeddings(emb_transformed, pos_in_chain[:, 0])
         # Multiply input rows so that we have one instance of the sentence for each chain referred to
-        context_query = torch.index_select(input_norm, 0, chain_map)
+        context_query = torch.index_select(context_query, 0, chain_map)
         # Attention to vectors in coref chain
         ctx_out, _ = self.context_attn(emb_transformed, emb_transformed, context_query, mask=chain_mask)
         # Reduce output so we get one row per example again
