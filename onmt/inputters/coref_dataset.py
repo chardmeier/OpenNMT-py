@@ -285,7 +285,8 @@ def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
 
     filter_pred = filter_pred if use_filter_pred else lambda x: True
 
-    for docid, doc_in in itertools.groupby(zip(docid_iter, src_iter, tgt_iter), key=lambda t: t[0]):
+    for docid_line, doc_in in itertools.groupby(zip(docid_iter, src_iter, tgt_iter), key=lambda t: t[0]):
+        docid = docid_line.split()[0]
         l_doc_in = list(doc_in)
         tok_src = [[t.text for t in spacy_src(snt_src.rstrip('\n'))] for _, snt_src, _ in l_doc_in]
         tok_tgt = [[t.text for t in spacy_tgt(snt_tgt.rstrip('\n'))] for _, _, snt_tgt in l_doc_in]
