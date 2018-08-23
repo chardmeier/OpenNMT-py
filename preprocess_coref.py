@@ -15,24 +15,28 @@ def openfile(fname, mode='rt'):
         return open(fname, mode)
 
 
-def process_corpus(corpus_type, file_stem, src, tgt, docids, shard_size, run_coref=None):
+def process_corpus(corpus_type, file_stem, corpus_files, shard_size, run_coref=None):
     ds_files = []
-    with openfile(src) as f_src, openfile(tgt) as f_tgt, openfile(docids) as f_docids:
-        for index, dataset in enumerate(create_coref_datasets(f_src, f_tgt, f_docids, shard_size, run_coref=run_coref)):
-            # We save fields in vocab.pt separately, so make it empty.
-            dataset.fields = []
+    for src, tgt, docids in corpus_files:
+        with openfile(src) as f_src, openfile(tgt) as f_tgt, openfile(docids) as f_docids:
+            for index, dataset in enumerate(create_coref_datasets(f_src, f_tgt, f_docids, shard_size,
+                                                                  run_coref=run_coref)):
+                # We save fields in vocab.pt separately, so make it empty.
+                dataset.fields = []
 
-            pt_file = "{:s}.{:s}.{:d}.pt".format(file_stem, corpus_type, index)
-            logger.info(" * saving %s data shard to %s." % (corpus_type, pt_file))
-            torch.save(dataset, pt_file)
-            ds_files.append(pt_file)
+                pt_file = "{:s}.{:s}.{:d}.pt".format(file_stem, corpus_type, index)
+                logger.info(" * saving %s data shard to %s." % (corpus_type, pt_file))
+                torch.save(dataset, pt_file)
+                ds_files.append(pt_file)
     return ds_files
 
 
 def main():
     parser = argparse.ArgumentParser(description='Tokenise and preprocess corpus for coref-mt.')
-    parser.add_argument('-train', nargs=3, help='Training corpus (src, tgt, docids).', required=True)
-    parser.add_argument('-valid', nargs=3, help='Validation corpus (src, tgt, docids).', required=True)
+    parser.add_argument('-train', nargs=3, help='Training corpus (src, tgt, docids). Can be repeated to join corpora.',
+                        action='append', required=True)
+    parser.add_argument('-valid', nargs=3, help='Validation corpus (src, tgt, docids). Can be repeated.',
+                        action='append', required=True)
     parser.add_argument('-shard_size', type=int, default=10 * 1024 * 1024, help='Shard size in bytes.')
     parser.add_argument('-save', help='Output file prefix.', required=True)
     parser.add_argument('-run_coref', help='Run coreference resolver during preprocessing. Takes model as parameter.')
@@ -65,13 +69,10 @@ def main():
         coref_model = None
 
     logger.info('Processing training corpus.')
-    train_dataset_files = process_corpus('train', args.save, args.train[0], args.train[1], args.train[2],
-                                         args.shard_size,
-                                         run_coref=coref_model)
+    train_dataset_files = process_corpus('train', args.save, args.train, args.shard_size, run_coref=coref_model)
 
     logger.info('Processing validation corpus.')
-    process_corpus('valid', args.save, args.valid[0], args.valid[1], args.valid[2], args.shard_size,
-                   run_coref=coref_model)
+    process_corpus('valid', args.save, args.valid, args.shard_size, run_coref=coref_model)
 
     logger.info("Building & saving vocabulary...")
     fields = CorefDataset.get_fields(1000, 1000)
