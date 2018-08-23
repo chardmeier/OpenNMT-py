@@ -27,7 +27,6 @@ class CorefPositionalEncoding(torch.nn.Module):
                               -(math.log(10000.0) / dim)).float())
         pe[:, 0::2] = torch.sin(position.float() * div_term)
         pe[:, 1::2] = torch.cos(position.float() * div_term)
-        pe = pe.unsqueeze(1)
         self.register_buffer('pe', pe)
         self.dim = dim
 
@@ -46,8 +45,11 @@ class CorefPositionalEncoding(torch.nn.Module):
         if mode == 'chain':
             steps = steps.squeeze()
             assert steps.ndimension() == 1
+            nchains = steps.shape[0]
             chain_length = emb.shape[1]
-            pe = self.pe[steps:steps + chain_length].unsqueeze(0)
+            pe = torch.empty((nchains, chain_length, self.dim), device=emb.device)
+            for i in range(nchains):
+                pe[i, :, :] = self.pe[steps[i]:steps[i] + chain_length]
         elif mode == 'query':
             assert steps.ndimension() == 2
             nitems = emb.shape[0]
