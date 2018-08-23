@@ -23,7 +23,7 @@ class CorefPositionalEncoding(torch.nn.Module):
         super(CorefPositionalEncoding, self).__init__()
         pe = torch.zeros(max_len, dim)
         position = torch.arange(0, max_len).unsqueeze(1)
-        div_term = torch.exp((torch.arange(0, dim, 2) *
+        div_term = torch.exp((torch.arange(0, dim, 2, dtype=torch.float) *
                               -(math.log(10000.0) / dim)).float())
         pe[:, 0::2] = torch.sin(position.float() * div_term)
         pe[:, 1::2] = torch.cos(position.float() * div_term)
