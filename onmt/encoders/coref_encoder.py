@@ -122,7 +122,7 @@ class CorefTransformerLayer(torch.nn.Module):
                                        mask=coref_context.attention_mask)
         # Reduce output so we get one row per example again
         ctx_context = _aggregate_chains(input_norm.shape[0], ctx_out,
-                                        coref_context.chain_map, coref_context.chain_mask)
+                                        coref_context.chain_map, coref_context.attention_mask)
 
         # Gate to choose between coref attention and self-attention
         gated_context = self.attn_gate(attn_context, ctx_context)
