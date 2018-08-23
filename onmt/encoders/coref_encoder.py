@@ -81,7 +81,7 @@ class CorefTransformerLayer(torch.nn.Module):
         self.linear_context = torch.nn.Linear(d_context, d_model, bias=True)
         self.context_attn = onmt.modules.MultiHeadedAttention(heads, d_model, dropout=dropout)
         self.attn_gate = SimpleGate(d_model)
-        self.positional_embeddings = CorefPositionalEncoding(self.d_model)
+        self.positional_embeddings = CorefPositionalEncoding(d_model)
 
         self.feed_forward = onmt.modules.position_ffn.PositionwiseFeedForward(d_model, d_ff, dropout)
         self.layer_norm = onmt.modules.LayerNorm(d_model)
