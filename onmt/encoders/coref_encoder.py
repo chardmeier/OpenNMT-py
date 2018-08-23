@@ -53,7 +53,6 @@ class CorefPositionalEncoding(torch.nn.Module):
         elif mode == 'query':
             assert steps.ndimension() == 2
             nitems = emb.shape[0]
-            max_len = steps.shape[1]
             pe = torch.where(steps.unsqueeze(-1).expand_as(emb) >= 0,
                              torch.gather(self.pe.expand(nitems, -1, -1), 1,
                                           steps.unsqueeze(-1).expand(-1, -1, self.dim).clamp(min=0)),
