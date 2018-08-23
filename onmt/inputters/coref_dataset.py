@@ -11,6 +11,7 @@ import torchtext
 import allennlp.data
 
 from onmt.inputters.dataset_base import (DatasetBase, PAD_WORD, BOS_WORD, EOS_WORD)
+from onmt.utils.logging import logger
 
 
 class CorefField(torchtext.data.RawField):
@@ -287,6 +288,7 @@ def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
 
     stripped_docid_iter = (docid_line.split()[0] for docid_line in docid_iter)
     for docid, doc_in in itertools.groupby(zip(stripped_docid_iter, src_iter, tgt_iter), key=lambda t: t[0]):
+        logger.info('Document %s' % docid)
         l_doc_in = list(doc_in)
         tok_src = [[t.text for t in spacy_src(snt_src.rstrip('\n'))] for _, snt_src, _ in l_doc_in]
         tok_tgt = [[t.text for t in spacy_tgt(snt_tgt.rstrip('\n'))] for _, _, snt_tgt in l_doc_in]
