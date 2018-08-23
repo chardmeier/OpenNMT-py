@@ -54,9 +54,10 @@ class CorefPositionalEncoding(torch.nn.Module):
             assert steps.ndimension() == 2
             nitems = emb.shape[0]
             max_len = steps.shape[1]
-            pe = torch.where(steps >= 0,
-                             torch.gather(self.pe.expand(nitems, -1, -1), 1, steps.expand(-1, -1, self.dim)),
-                             torch.zeros(nitems, max_len, self.dim))
+            pe = torch.where(steps.unsqueeze(-1).expand_as(emb) >= 0,
+                             torch.gather(self.pe.expand(nitems, -1, -1), 1,
+                                          steps.unsqueeze(-1).expand(-1, -1, self.dim).clamp(min=0)),
+                             torch.zeros_like(emb))
         else:
             raise ValueError('Unknown mode %s, should be chain or query.' % mode)
 
@@ -111,11 +112,11 @@ class CorefTransformerLayer(torch.nn.Module):
         # Now the coref-specific parts.
         # Linearly map span embeddings from the size used by AllenNLP to our model size.
         emb_transformed = self.linear_context(coref_context.span_embeddings)
-        # Add positional embeddings to span embeddings and query
-        emb_transformed = self.positional_embeddings('chain', emb_transformed, coref_context.chain_start)
-        context_query = self.positional_embeddings('query', input_norm, coref_context.mention_pos_in_chain)
         # Multiply input rows so that we have one instance of the sentence for each chain referred to
-        context_query = torch.index_select(context_query, 0, coref_context.chain_map)
+        context_query = torch.index_select(input_norm, 0, coref_context.chain_map)
+        # Add positional embeddings to span embeddings and query
+        context_query = self.positional_embeddings('query', context_query, coref_context.mention_pos_in_chain)
+        emb_transformed = self.positional_embeddings('chain', emb_transformed, coref_context.chain_start)
         # Attention to vectors in coref chain
         ctx_out, _ = self.context_attn(emb_transformed, emb_transformed, context_query,
                                        mask=coref_context.attention_mask)
