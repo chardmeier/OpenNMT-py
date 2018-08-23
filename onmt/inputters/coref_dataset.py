@@ -49,30 +49,21 @@ class CorefField(torchtext.data.RawField):
 
         :param batch (`torchtext.data.Batch`): input data
         :param device (`torch.device`): device to create tensors on
-        :return: (`tuple(tuple(tensor, tensor), tuple(LongTensor, FloatTensor, ByteTensor, LongTensor))`)
+        :return: (`tuple(tuple(tensor, tensor), CorefContext`)
             The first element of the outer tuple is exactly the representation that OpenNMT would use for
             data_type 'text', that is, a pair of a padded matrix with word indices and the associated
             original sentence lengths. The second element contains the information relevant to the
-            coref-mt system:
-               chain_map (`LongTensor`): Mapping from coreference chains to examples in the batch `[total_chains]`
-               span_embeddings (`FloatTensor`): Span embeddings of the mentions in each chain
-                                                `[total_chains x max_chain_length x span_embedding_size]`
-               mask (`ByteTensor`): Binary mask indicating which elements of the embeddings tensor are relevant
-                                    for attention for each word position (i.e., mentions the word belongs to and
-                                    the actual length of each chain)
-                                    `[total_chains x sentence_length x max_chain_length]`
-               pos_in_chain (`LongTensor`): Position in chain of the first associated mention in a sentence
-                                    and the positions of the first and last mentions of this chain included
-                                    in the span_embeddings tensor `[total_chains x 3]`
+            coref-mt system, see class `CorefContext`.
         """
         src_batch = self.src_field.process([x[0] for x in batch], device=device)
 
         pad_len = src_batch[0].shape[0]
 
         l_chain_map = []
+        l_chain_start = []
         l_span_embeddings = []
         l_mask = []
-        l_pos_in_cluster = []
+        l_mention_pos_in_chain = []
 
         total_chains = 0
         for i, ex in enumerate(batch):
@@ -85,24 +76,47 @@ class CorefField(torchtext.data.RawField):
                 emb_to = min(chain_length, max_pos_in_cluster + self.max_mentions_after)
 
                 l_chain_map.append(i)
+                l_chain_start.append(min_pos_in_cluster)
                 l_span_embeddings.append(emb[emb_from:emb_to, :])
                 snt_mask = torch.zeros(pad_len, dtype=torch.uint8)
+                snt_mention_pos_in_chain = torch.full(pad_len, -1, dtype=torch.long)
                 for span, pos_in_chain in spans:
                     snt_mask[span[0]:span[1] + 1] = 1
+                    snt_mention_pos_in_chain[span[0]:span[1] + 1] = pos_in_chain
                 l_mask.append(snt_mask)
-                l_pos_in_cluster.append([min_pos_in_cluster, emb_from, emb_to])
+                l_mention_pos_in_chain.append(snt_mention_pos_in_chain)
 
         max_chain_length = max(emb.shape[0] for emb in l_span_embeddings)
         chain_map = torch.tensor(l_chain_map, device=device, dtype=torch.long)
-        pos_in_chain = torch.tensor(l_pos_in_cluster, device=device, dtype=torch.long)
+        chain_start = torch.tensor(l_chain_start, device=device, dtype=torch.long)
+        mention_pos_in_chain = torch.tensor(l_mention_pos_in_chain, device=device, dtype=torch.long)
         span_embeddings = torch.zeros(total_chains, max_chain_length, self.span_emb_size, device=device)
-        mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
+        attention_mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
 
         for i, (emb, snt_mask) in enumerate(zip(l_span_embeddings, l_mask)):
             span_embeddings[i, :emb.shape[0], :] = emb
-            mask[i, snt_mask, :emb.shape[0]] = 1
+            attention_mask[i, snt_mask, :emb.shape[0]] = 1
 
-        return src_batch, (chain_map, span_embeddings, mask, pos_in_chain)
+        coref_context = CorefContext(chain_map, chain_start, span_embeddings,
+                                     attention_mask, mention_pos_in_chain)
+        return src_batch, coref_context
+
+
+class CorefContext:
+    def __init__(self, chain_map, chain_start, span_embeddings, attention_mask, mention_pos_in_chain):
+        # A [nchains] long vector mapping chains to examples in the batch
+        self.chain_map = chain_map
+        # A [nchains] long vector indicating the chain-internal position of the first recorded mention
+        self.chain_start = chain_start
+        # A [nchains x max_chain_length x span_embedding_size] float tensor holding the mention embeddings
+        # of all chains
+        self.span_embeddings = span_embeddings
+        # A [nchains x sentence_length x max_chain_length] byte tensor indicating the positions eligible for
+        # attention (i.e., words belonging to a mention and the actual chain length)
+        self.attention_mask = attention_mask
+        # A [nchains x sentence_length] long tensor indicating the chain-internal position of each mention
+        # in the sentence
+        self.mention_pos_in_chain = mention_pos_in_chain
 
 
 class CorefDataset(DatasetBase):

@@ -87,15 +87,13 @@ class CorefTransformerLayer(torch.nn.Module):
         self.layer_norm = onmt.modules.LayerNorm(d_model)
         self.dropout = torch.nn.Dropout(dropout)
 
-    def forward(self, inputs, context, mask):
+    def forward(self, inputs, coref_context, mask):
         """
         Coref Transformer Encoder Layer definition.
 
         Args:
             inputs (`FloatTensor`): `[batch_size x src_len x model_dim]`
-            context (list(tuple(`FloatTensor`, `LongTensor`))): For each cluster occurring in the sentence,
-                a pair of the corresponding span embeddings `[batch_size x cluster_size x model_dim]` and
-                an accompanying mask `[src_len]` indicating the mentions in the sentence belonging to the cluster
+            context (`CorefContext`): the context required for coref processing
             mask (`LongTensor`): `[batch_size x src_len x src_len]`
 
         Returns:
@@ -109,20 +107,19 @@ class CorefTransformerLayer(torch.nn.Module):
         attn_context, _ = self.self_attn(input_norm, input_norm, input_norm, mask=mask)
 
         # Now the coref-specific parts.
-        # See `onmt.inputters.coref_dataset.CorefField` for a description of what these elements look like.
-        chain_map, span_embeddings, chain_mask, pos_in_chain = context
-
         # Linearly map span embeddings from the size used by AllenNLP to our model size.
-        emb_transformed = self.linear_context(span_embeddings)
+        emb_transformed = self.linear_context(coref_context.span_embeddings)
         # Add positional embeddings to span embeddings and query
         emb_transformed = self.positional_embeddings(emb_transformed, pos_in_chain[:, 1:])
         context_query = self.positional_embeddings(emb_transformed, pos_in_chain[:, 0])
         # Multiply input rows so that we have one instance of the sentence for each chain referred to
-        context_query = torch.index_select(context_query, 0, chain_map)
+        context_query = torch.index_select(context_query, 0, coref_context.chain_map)
         # Attention to vectors in coref chain
-        ctx_out, _ = self.context_attn(emb_transformed, emb_transformed, context_query, mask=chain_mask)
+        ctx_out, _ = self.context_attn(emb_transformed, emb_transformed, context_query,
+                                       mask=coref_context.attention_mask)
         # Reduce output so we get one row per example again
-        ctx_context = _aggregate_chains(input_norm.shape[0], ctx_out, chain_map, chain_mask)
+        ctx_context = _aggregate_chains(input_norm.shape[0], ctx_out,
+                                        coref_context.chain_map, coref_context.chain_mask)
 
         # Gate to choose between coref attention and self-attention
         gated_context = self.attn_gate(attn_context, ctx_context)
