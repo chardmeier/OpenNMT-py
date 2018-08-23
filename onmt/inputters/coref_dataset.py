@@ -79,7 +79,7 @@ class CorefField(torchtext.data.RawField):
                 l_chain_start.append(min_pos_in_cluster)
                 l_span_embeddings.append(emb[emb_from:emb_to, :])
                 snt_mask = torch.zeros(pad_len, dtype=torch.uint8)
-                snt_mention_pos_in_chain = torch.full(pad_len, -1, dtype=torch.long)
+                snt_mention_pos_in_chain = torch.full((pad_len,), -1, dtype=torch.long)
                 for span, pos_in_chain in spans:
                     snt_mask[span[0]:span[1] + 1] = 1
                     snt_mention_pos_in_chain[span[0]:span[1] + 1] = pos_in_chain
