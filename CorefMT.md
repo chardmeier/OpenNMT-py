@@ -76,13 +76,3 @@ python OpenNMT-py/train.py -gpuid 0 \
 
 Here, `data_prefix` is the pointer to where the preprocessed data files are
 stored, and `model_path` is the prefix for saving the model.
-
-TODO
-----
-
-- GPU memory problems seem to be due to the accumulation of large span
-  embedding matrices during gradient accumulation. Reducing `-accum_count`
-  to 3 delays the problem, but doesn't solve it. Moreover, batch sizes may
-  have an impact on model quality, see discussion
-  [here](https://github.com/tensorflow/tensor2tensor/issues/444).
-- Implement positional embeddings for members of coreference chains.
