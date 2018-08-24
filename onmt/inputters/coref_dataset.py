@@ -4,6 +4,7 @@
 import collections
 import itertools
 import spacy
+import traceback
 
 import torch
 import torchtext
@@ -288,11 +289,18 @@ def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
 
     stripped_docid_iter = (docid_line.split()[0] for docid_line in docid_iter)
     for docid, doc_in in itertools.groupby(zip(stripped_docid_iter, src_iter, tgt_iter), key=lambda t: t[0]):
-        logger.info('Document %s' % docid)
         l_doc_in = list(doc_in)
+        logger.info('Document %s: %d segments' % (docid, len(l_doc_in)))
         tok_src = [[t.text for t in spacy_src(snt_src.rstrip('\n'))] for _, snt_src, _ in l_doc_in]
         tok_tgt = [[t.text for t in spacy_tgt(snt_tgt.rstrip('\n'))] for _, _, snt_tgt in l_doc_in]
-        doc = doc_builder.make_document(docid.rstrip('\n'), tok_src, tok_tgt)
+
+        try:
+            doc = doc_builder.make_document(docid.rstrip('\n'), tok_src, tok_tgt)
+        except Exception as err:
+            # AllenNLP sometimes fails on weird data (e.g., single-sentence docs without any mentions)
+            logger.error('Document creation failed. Skipping document.')
+            traceback.print_exc()
+            continue
 
         for i, (s, t) in enumerate(zip(tok_src, tok_tgt)):
             ex = torchtext.data.Example()
