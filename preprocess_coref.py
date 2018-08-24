@@ -20,12 +20,11 @@ def process_corpus(corpus_type, file_stem, corpus_files, shard_size, run_coref=N
     for src, tgt, docids in corpus_files:
         logger.info("Processing corpus %s" % src)
         with openfile(src) as f_src, openfile(tgt) as f_tgt, openfile(docids) as f_docids:
-            for index, dataset in enumerate(create_coref_datasets(f_src, f_tgt, f_docids, shard_size,
-                                                                  run_coref=run_coref)):
+            for dataset in create_coref_datasets(f_src, f_tgt, f_docids, shard_size, run_coref=run_coref):
                 # We save fields in vocab.pt separately, so make it empty.
                 dataset.fields = []
 
-                pt_file = "{:s}.{:s}.{:d}.pt".format(file_stem, corpus_type, index)
+                pt_file = "{:s}.{:s}.{:d}.pt".format(file_stem, corpus_type, len(ds_files))
                 logger.info(" * saving %s data shard to %s." % (corpus_type, pt_file))
                 torch.save(dataset, pt_file)
                 ds_files.append(pt_file)
