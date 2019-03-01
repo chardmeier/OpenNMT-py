@@ -19,7 +19,7 @@ class SimpleGate(torch.nn.Module):
 
 # mostly copied from onmt.modules.embeddings.PositionalEncoding
 class CorefPositionalEncoding(torch.nn.Module):
-    def __init__(self, dim, max_len=200):
+    def __init__(self, dim, max_len=1000):
         super(CorefPositionalEncoding, self).__init__()
         pe = torch.zeros(max_len, dim)
         position = torch.arange(0, max_len).unsqueeze(1)
@@ -48,6 +48,7 @@ class CorefPositionalEncoding(torch.nn.Module):
             nchains = steps.shape[0]
             chain_length = emb.shape[1]
             pe = torch.empty((nchains, chain_length, self.dim), device=emb.device)
+            #change here MeB for Pytorch version 0.4.1.point2
             for i in range(nchains):
                 pe[i, :, :] = self.pe[steps[i]:steps[i] + chain_length]
         elif mode == 'query':
@@ -170,7 +171,9 @@ class CorefTransformerEncoder(onmt.encoders.encoder.EncoderBase):
         self.layer_norm = onmt.modules.LayerNorm(d_model)
 
     def forward(self, inp, lengths=None):
-        src, context = inp
+        #print(inp)
+        #src, context, gpu = inp
+        src = inp
         self._check_args(src, lengths)
 
         emb = self.embeddings(src)
@@ -184,7 +187,7 @@ class CorefTransformerEncoder(onmt.encoders.encoder.EncoderBase):
         for i in range(self.num_layers - 1):
             out = self.transformer[i](out, mask)
 
-        out = self.context_layer(out, context, mask)
+        #out = self.context_layer(out, context, mask)
 
         out = self.layer_norm(out)
         return emb, out.transpose(0, 1).contiguous()

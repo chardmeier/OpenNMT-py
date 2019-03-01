@@ -35,6 +35,9 @@ def build_translator(opt, report_score=True, logger=None, out_file=None):
     fields['src'].max_mentions_before = opts.max_mentions_before
     fields['src'].max_mentions_after = opts.max_mentions_after
 
+    #fields['src'].max_mentions_before = 1000
+    #fields['src'].max_mentions_after = 1000
+
     scorer = onmt.translate.GNMTGlobalScorer(opt.alpha,
                                              opt.beta,
                                              opt.coverage_penalty,
