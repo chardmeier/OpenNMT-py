@@ -3,6 +3,8 @@
 from __future__ import print_function
 import argparse
 import codecs
+import contextlib
+import itertools
 import os
 import math
 
@@ -46,7 +48,7 @@ def build_translator(opt, report_score=True, logger=None, out_file=None):
                         "ignore_when_blocking", "dump_beam", "report_bleu",
                         "data_type", "replace_unk", "gpu", "verbose", "fast"]}
 
-    translator = Translator(model, fields, global_scorer=scorer,
+    translator = Translator(model, fields, run_coref=opt.run_coref, global_scorer=scorer,
                             out_file=out_file, report_score=report_score,
                             copy_attn=model_opt.copy_attn, logger=logger,
                             **kwargs)
@@ -79,6 +81,7 @@ class Translator(object):
                  beam_size,
                  n_best=1,
                  max_length=100,
+                 run_coref=None,
                  global_scorer=None,
                  copy_attn=False,
                  logger=None,
@@ -109,6 +112,7 @@ class Translator(object):
         self.fields = fields
         self.n_best = n_best
         self.max_length = max_length
+        self.run_coref = run_coref
         self.global_scorer = global_scorer
         self.copy_attn = copy_attn
         self.beam_size = beam_size
@@ -178,18 +182,28 @@ class Translator(object):
 
         if batch_size is None:
             raise ValueError("batch_size must be set")
-        data = inputters.build_dataset(self.fields,
-                                       self.data_type,
-                                       src_path=src_path,
-                                       src_data_iter=src_data_iter,
-                                       tgt_path=tgt_path,
-                                       tgt_data_iter=tgt_data_iter,
-                                       src_dir=src_dir,
-                                       sample_rate=self.sample_rate,
-                                       window_size=self.window_size,
-                                       window_stride=self.window_stride,
-                                       window=self.window,
-                                       use_filter_pred=self.use_filter_pred)
+
+        if self.run_coref is None:
+            data = inputters.build_dataset(self.fields,
+                                           self.data_type,
+                                           src_path=src_path,
+                                           src_data_iter=src_data_iter,
+                                           tgt_path=tgt_path,
+                                           tgt_data_iter=tgt_data_iter,
+                                           src_dir=src_dir,
+                                           sample_rate=self.sample_rate,
+                                           window_size=self.window_size,
+                                           window_stride=self.window_stride,
+                                           window=self.window,
+                                           use_filter_pred=self.use_filter_pred)
+        else:
+            fn_src, fn_docids = src_path
+            with contextlib.ExitStack() as stack:
+                f_src = stack.enter_context(open(fn_src, 'rt'))
+                f_docids = stack.enter_context(open(fn_docids, 'rt'))
+                f_tgt = None if tgt_path is None else stack.enter_context(open(tgt_path, 'rt'))
+                data = itertools.chain(onmt.inputters.coref_dataset.create_coref_datasets(f_src, f_tgt, f_docids,
+                                                                                          run_coref=self.run_coref))
 
         if self.cuda:
             cur_device = "cuda"

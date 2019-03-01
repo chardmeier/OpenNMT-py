@@ -4,6 +4,7 @@
 import collections
 import itertools
 import spacy
+import sys
 import traceback
 
 import torch
@@ -268,12 +269,14 @@ class Document:
         self.coref_per_snt = coref_per_snt
 
 
-def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
+def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size=None,
                           use_filter_pred=True, src_seq_length=50, tgt_seq_length=50,
                           src_lang='en', tgt_lang='fr', run_coref=None):
     spacy_src = spacy.load(src_lang, disable=['parser', 'tagger', 'ner'])
     spacy_tgt = spacy.load(tgt_lang, disable=['parser', 'tagger', 'ner'])
 
+    if shard_size is None:
+        shard_size = sys.maxsize
     current_shard_size = 0
     index_in_shard = 0
     examples = []
@@ -287,12 +290,20 @@ def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size,
 
     filter_pred = filter_pred if use_filter_pred else lambda x: True
 
+    if tgt_iter is None:
+        has_target = False
+        tgt_iter = itertools.repeat(None)
+    else:
+        has_target = True
+
+    tok_tgt = None
     stripped_docid_iter = (docid_line.split()[0] for docid_line in docid_iter)
     for docid, doc_in in itertools.groupby(zip(stripped_docid_iter, src_iter, tgt_iter), key=lambda t: t[0]):
         l_doc_in = list(doc_in)
         logger.info('Document %s: %d segments' % (docid, len(l_doc_in)))
         tok_src = [[t.text for t in spacy_src(snt_src.rstrip('\n'))] for _, snt_src, _ in l_doc_in]
-        tok_tgt = [[t.text for t in spacy_tgt(snt_tgt.rstrip('\n'))] for _, _, snt_tgt in l_doc_in]
+        if has_target:
+            tok_tgt = [[t.text for t in spacy_tgt(snt_tgt.rstrip('\n'))] for _, _, snt_tgt in l_doc_in]
 
         try:
             doc = doc_builder.make_document(docid.rstrip('\n'), tok_src, tok_tgt)

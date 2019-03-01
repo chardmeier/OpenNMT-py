@@ -419,6 +419,8 @@ def translate_opts(parser):
     group = parser.add_argument_group('Model')
     group.add_argument('-model', required=True,
                        help='Path to model .pt file')
+    group.add_argument('-run_coref',
+                       help='Run coreference resolver during preprocessing. Takes model as parameter.')
 
     group = parser.add_argument_group('Data')
     group.add_argument('-data_type', default="text",
