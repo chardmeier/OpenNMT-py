@@ -148,6 +148,7 @@ class Translator(object):
     def translate(self,
                   src_path=None,
                   src_data_iter=None,
+                  docids=None,
                   tgt_path=None,
                   tgt_data_iter=None,
                   src_dir=None,
@@ -197,10 +198,12 @@ class Translator(object):
                                            window=self.window,
                                            use_filter_pred=self.use_filter_pred)
         else:
-            fn_src, fn_docids = src_path
+            if docids is None:
+                raise ValueError('Translation with coreference resolution requires document IDs (-docids).')
+
             with contextlib.ExitStack() as stack:
-                f_src = stack.enter_context(open(fn_src, 'rt'))
-                f_docids = stack.enter_context(open(fn_docids, 'rt'))
+                f_src = stack.enter_context(open(src_path, 'rt'))
+                f_docids = stack.enter_context(open(docids, 'rt'))
                 f_tgt = None if tgt_path is None else stack.enter_context(open(tgt_path, 'rt'))
                 data = itertools.chain(onmt.inputters.coref_dataset.create_coref_datasets(f_src, f_tgt, f_docids,
                                                                                           run_coref=self.run_coref))

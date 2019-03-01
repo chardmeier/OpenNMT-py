@@ -431,6 +431,7 @@ def translate_opts(parser):
                        sequence)""")
     group.add_argument('-src_dir', default="",
                        help='Source directory for image or audio files')
+    group.add_argument('-docids', help='Document IDs (for coref_transformer).')
     group.add_argument('-tgt',
                        help='True target sequence (optional)')
     group.add_argument('-output', default='pred.txt',
