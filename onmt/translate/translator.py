@@ -32,6 +32,7 @@ def build_translator(opt, report_score=True, logger=None, out_file=None):
         onmt.model_builder.load_test_model(opt, dummy_opt.__dict__)
 
     # ugly ugly
+
     fields['src'].max_mentions_before = opts.max_mentions_before
     fields['src'].max_mentions_after = opts.max_mentions_after
 

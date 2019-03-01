@@ -18,6 +18,8 @@ class SimpleGate(torch.nn.Module):
 
 
 # mostly copied from onmt.modules.embeddings.PositionalEncoding
+# Increased the max_len as the training broke
+
 class CorefPositionalEncoding(torch.nn.Module):
     def __init__(self, dim, max_len=1000):
         super(CorefPositionalEncoding, self).__init__()
