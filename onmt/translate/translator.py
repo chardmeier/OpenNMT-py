@@ -205,8 +205,8 @@ class Translator(object):
                 f_src = stack.enter_context(open(src_path, 'rt'))
                 f_docids = stack.enter_context(open(docids, 'rt'))
                 f_tgt = None if tgt_path is None else stack.enter_context(open(tgt_path, 'rt'))
-                data = itertools.chain(onmt.inputters.coref_dataset.create_coref_datasets(f_src, f_tgt, f_docids,
-                                                                                          run_coref=self.run_coref))
+                data = next(onmt.inputters.coref_dataset.create_coref_datasets(f_src, f_tgt, f_docids,
+                                                                               run_coref=self.run_coref))
 
         if self.cuda:
             cur_device = "cuda"
