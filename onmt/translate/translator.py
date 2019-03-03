@@ -145,7 +145,8 @@ class Translator(object):
                 "log_probs": []}
 
         if run_coref:
-            self.logger.info('Loading coref model from %s.' % run_coref)
+            if self.logger is not None:
+                self.logger.info('Loading coref model from %s.' % run_coref)
             self.coref_model = allennlp.models.load_archive(run_coref)
         else:
             self.coref_model = None
