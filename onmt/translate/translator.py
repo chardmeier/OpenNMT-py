@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """ Translator Class and builder """
 from __future__ import print_function
+import allennlp.models
 import argparse
 import codecs
 import contextlib
-import itertools
 import os
 import math
 
@@ -112,7 +112,6 @@ class Translator(object):
         self.fields = fields
         self.n_best = n_best
         self.max_length = max_length
-        self.run_coref = run_coref
         self.global_scorer = global_scorer
         self.copy_attn = copy_attn
         self.beam_size = beam_size
@@ -144,6 +143,12 @@ class Translator(object):
                 "beam_parent_ids": [],
                 "scores": [],
                 "log_probs": []}
+
+        if run_coref:
+            self.logger.info('Loading coref model from %s.' % run_coref)
+            self.coref_model = allennlp.models.load_archive(run_coref)
+        else:
+            self.coref_model = None
 
     def translate(self,
                   src_path=None,
@@ -184,7 +189,7 @@ class Translator(object):
         if batch_size is None:
             raise ValueError("batch_size must be set")
 
-        if self.run_coref is None:
+        if self.coref_model is None:
             data = inputters.build_dataset(self.fields,
                                            self.data_type,
                                            src_path=src_path,
@@ -206,7 +211,7 @@ class Translator(object):
                 f_docids = stack.enter_context(open(docids, 'rt'))
                 f_tgt = None if tgt_path is None else stack.enter_context(open(tgt_path, 'rt'))
                 data = next(onmt.inputters.coref_dataset.create_coref_datasets(f_src, f_tgt, f_docids,
-                                                                               run_coref=self.run_coref))
+                                                                               run_coref=self.coref_model))
 
         if self.cuda:
             cur_device = "cuda"
