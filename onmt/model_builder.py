@@ -133,10 +133,12 @@ def load_test_model(opt, dummy_opt):
     """ Load model for Inference """
     checkpoint = torch.load(opt.model,
                             map_location=lambda storage, loc: storage)
-    fields = inputters.load_fields_from_vocab(
-        checkpoint['vocab'], opt, data_type=opt.data_type)
 
     model_opt = checkpoint['opt']
+
+    fields = inputters.load_fields_from_vocab(
+        checkpoint['vocab'], model_opt, data_type=opt.data_type)
+
     for arg in dummy_opt:
         if arg not in model_opt:
             model_opt.__dict__[arg] = dummy_opt[arg]

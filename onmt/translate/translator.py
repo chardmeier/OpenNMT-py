@@ -33,10 +33,6 @@ def build_translator(opt, report_score=True, logger=None, out_file=None):
     fields, model, model_opt = \
         onmt.model_builder.load_test_model(opt, dummy_opt.__dict__)
 
-    # ugly ugly
-    fields['src'].max_mentions_before = opts.max_mentions_before
-    fields['src'].max_mentions_after = opts.max_mentions_after
-
     scorer = onmt.translate.GNMTGlobalScorer(opt.alpha,
                                              opt.beta,
                                              opt.coverage_penalty,

@@ -40,7 +40,7 @@ def get_fields(data_type, n_src_features, n_tgt_features, opt):
             create `torchtext.data.Field` for.
         n_tgt_features: the number of target features to
             create `torchtext.data.Field` for.
-        opt: Command-line options
+        opt: Command-line options from training
 
     Returns:
         A dictionary whose keys are strings and whose values are the
