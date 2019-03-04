@@ -68,8 +68,11 @@ def load_fields_from_vocab(vocab, opt, data_type="text"):
     fields = get_fields(data_type, n_src_features, n_tgt_features, opt)
     for k, v in vocab.items():
         # Hack. Can't pickle defaultdict :(
-        v.stoi = defaultdict(lambda: 0, v.stoi)
-        fields[k].vocab = v
+        # The check (k in fields) is to remain compatible with old models after removing some unused
+        # fields from the coref data type.
+        if k in fields:
+            v.stoi = defaultdict(lambda: 0, v.stoi)
+            fields[k].vocab = v
     return fields
 
 
