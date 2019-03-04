@@ -543,7 +543,7 @@ class Translator(object):
 
         enc_states, memory_bank = self.model.encoder(src, src_lengths)
         dec_states = self.model.decoder.init_decoder_state(
-            src, memory_bank, enc_states)
+            self._get_src_text(src), memory_bank, enc_states)
 
         if src_lengths is None:
             src_lengths = torch.Tensor(batch_size).type_as(memory_bank.data)\
@@ -620,6 +620,14 @@ class Translator(object):
 
         return ret
 
+    def _get_src_text(self, src):
+        if isinstance(src, tuple):
+            # coref src has extra information
+            src_text = src[0]
+        else:
+            src_text = src
+        return src_text
+
     def _from_beam(self, beam):
         ret = {"predictions": [],
                "scores": [],
@@ -649,7 +657,7 @@ class Translator(object):
         #  (1) run the encoder on the src
         enc_states, memory_bank = self.model.encoder(src, src_lengths)
         dec_states = \
-            self.model.decoder.init_decoder_state(src, memory_bank, enc_states)
+            self.model.decoder.init_decoder_state(self._get_src_text(src), memory_bank, enc_states)
 
         #  (2) if a target is specified, compute the 'goldScore'
         #  (i.e. log likelihood) of the target under the model
