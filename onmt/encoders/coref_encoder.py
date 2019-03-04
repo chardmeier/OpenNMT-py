@@ -19,7 +19,7 @@ class SimpleGate(torch.nn.Module):
 
 # mostly copied from onmt.modules.embeddings.PositionalEncoding
 class CorefPositionalEncoding(torch.nn.Module):
-    def __init__(self, dim, max_len=200):
+    def __init__(self, dim, max_len=1000):
         super(CorefPositionalEncoding, self).__init__()
         pe = torch.zeros(max_len, dim)
         position = torch.arange(0, max_len).unsqueeze(1)
