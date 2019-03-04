@@ -208,6 +208,7 @@ class Translator(object):
                 f_docids = stack.enter_context(open(docids, 'rt'))
                 f_tgt = None if tgt_path is None else stack.enter_context(open(tgt_path, 'rt'))
                 data = next(onmt.inputters.coref_dataset.create_coref_datasets(f_src, f_tgt, f_docids,
+                                                                               fields=self.fields,
                                                                                run_coref=self.coref_model))
 
         if self.cuda:

@@ -269,7 +269,7 @@ class Document:
         self.coref_per_snt = coref_per_snt
 
 
-def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size=None,
+def create_coref_datasets(src_iter, tgt_iter, docid_iter, fields=None, shard_size=None,
                           use_filter_pred=True, src_seq_length=50, tgt_seq_length=50,
                           src_lang='en', tgt_lang='fr', run_coref=None):
     spacy_src = spacy.load(src_lang, disable=['parser', 'tagger', 'ner'])
@@ -281,7 +281,9 @@ def create_coref_datasets(src_iter, tgt_iter, docid_iter, shard_size=None,
     index_in_shard = 0
     examples = []
 
-    fields = CorefDataset.get_fields(1000, 1000)
+    if fields is None:
+        fields = CorefDataset.get_fields(1000, 1000)
+
     doc_builder = DocumentBuilder(run_coref)
 
     def filter_pred(example):
