@@ -2,6 +2,8 @@ import math
 import onmt
 import torch
 
+from onmt.encoders.encoder import EncoderBase
+
 
 # The standard OpenNMT implementations of gates and positional embeddings do additional things we don't want,
 # therefore we provide our own basic versions of them.
@@ -157,7 +159,7 @@ def _aggregate_chains(batch_size, ctx_out, chain_map, mask):
     return torch.where(torch.eq(out + 1, out), torch.zeros(1, device=ctx_out.device), out)
 
 
-class CorefTransformerEncoder(onmt.encoders.encoder.EncoderBase):
+class CorefTransformerEncoder(EncoderBase):
     def __init__(self, num_layers, d_model, d_context, heads, d_ff, dropout, embeddings):
         super(CorefTransformerEncoder, self).__init__()
 
