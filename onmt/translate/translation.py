@@ -67,6 +67,8 @@ class TranslationBuilder(object):
         data_type = self.data.data_type
         if data_type == 'text':
             src = batch.src[0].data.index_select(1, perm)
+        elif data_type == 'coref':
+            src = batch.src[0][0].data.index_select(1, perm)
         else:
             src = None
 
@@ -78,9 +80,12 @@ class TranslationBuilder(object):
         translations = []
         for b in range(batch_size):
             if data_type == 'text':
+                src_raw = self.data.examples[inds[b]].src
                 src_vocab = self.data.src_vocabs[inds[b]] \
                     if self.data.src_vocabs else None
-                src_raw = self.data.examples[inds[b]].src
+            elif data_type == 'coref':
+                src_raw = self.data.examples[inds[b]].src[0]
+                src_vocab = None
             else:
                 src_vocab = None
                 src_raw = None
