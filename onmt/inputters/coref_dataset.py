@@ -3,8 +3,8 @@
 
 import collections
 import itertools
+import six
 import spacy
-import sys
 import traceback
 
 import torch
@@ -12,7 +12,7 @@ import torchtext
 
 import allennlp.data
 
-from onmt.inputters.dataset_base import (DatasetBase, PAD_WORD, BOS_WORD, EOS_WORD)
+from onmt.inputters.datareader_base import DataReaderBase
 from onmt.utils.logging import logger
 
 
@@ -122,99 +122,75 @@ class CorefContext:
         self.mention_pos_in_chain = mention_pos_in_chain
 
 
-class CorefDataset(DatasetBase):
-    """ Dataset for data_type=='coref'
+def coref_sort_key(ex):
+    """ Sort using length of source sentences. """
+    # Default to a balanced sort, prioritizing tgt len match.
+    # TODO: make this configurable.
+    if hasattr(ex, "tgt"):
+        return len(ex.src), len(ex.tgt)
+    return len(ex.src)
 
-        Build `Example` objects, `Field` objects, and filter_pred function
-        from text corpus.
+
+class CorefDataReader(DataReaderBase):
+    def __init__(self, src_lang, tgt_lang, run_coref):
+        self.spacy = {'src': spacy.load(src_lang, disable=['parser', 'tagger', 'ner']),
+                      'tgt': spacy.load(tgt_lang, disable=['parser', 'tagger', 'ner'])}
+        self.doc_builder = DocumentBuilder(run_coref)
+
+
+    @classmethod
+    def from_opt(cls, opt):
+        return cls(opt.src_lang, opt.tgt_lang, opt.run_coref)
+
+    def read(self, sequences, side, _dir=None):
+        """Read coref data from disk.
 
         Args:
-            fields (dict): a dictionary of `torchtext.data.Field`.
-                Keys are like 'src', 'tgt', 'src_map', and 'alignment'.
-            src_examples_iter (dict iter): preprocessed source example
-                dictionary iterator.
-            tgt_examples_iter (dict iter): preprocessed target example
-                dictionary iterator.
-            num_src_feats (int): number of source side features.
-            num_tgt_feats (int): number of target side features.
-            src_seq_length (int): maximum source sequence length.
-            tgt_seq_length (int): maximum target sequence length.
-            dynamic_dict (bool): create dynamic dictionaries?
-            use_filter_pred (bool): use a custom filter predicate to filter
-                out examples?
-    """
+            sequences (str or Iterable[str]):
+                path to text file or iterable of the actual text data.
+            side (str): Prefix used in return dict. Usually
+                ``"src"`` or ``"tgt"``.
+            _dir (NoneType): Leave as ``None``. This parameter exists to
+                conform with the :func:`DataReaderBase.read()` signature.
 
-    n_src_feats = 0
-    n_tgt_feats = 0
-
-    def __init__(self, examples, fields, filter_pred):
-        super(CorefDataset, self).__init__(examples, fields, filter_pred)
-        self.data_type = 'coref'
-
-    def sort_key(self, ex):
-        """ Sort using length of source sentences. """
-        # Default to a balanced sort, prioritizing tgt len match.
-        # TODO: make this configurable.
-        if hasattr(ex, "tgt"):
-            return len(ex.src), len(ex.tgt)
-        return len(ex.src)
-
-    @staticmethod
-    def collapse_copy_scores(scores, batch, tgt_vocab, src_vocabs):
-        raise NotImplementedError
-
-    @staticmethod
-    def get_fields(max_mentions_before, max_mentions_after):
+        Yields:
+            dictionaries whose keys are the names of fields and whose
+            values are more or less the result of tokenizing with those
+            fields.
         """
-        Returns:
-            A dictionary whose keys are strings and whose values
-            are the corresponding Field objects.
-        """
-        fields = {}
+        assert _dir is None or _dir == "", \
+            "Cannot use _dir with CorefDataReader."
+        if isinstance(sequences, str):
+            sequences = DataReaderBase._read_file(sequences)
 
-        fields["src"] = CorefField(pad_token=PAD_WORD, include_lengths=True,
-                                   max_mentions_before=max_mentions_before,
-                                   max_mentions_after=max_mentions_after)
+        if side != 'src':
+            yield from self._read_not_src(sequences, side)
+        else:
+            yield from self._read_src(sequences)
 
-        fields["tgt"] = torchtext.data.Field(
-            init_token=BOS_WORD, eos_token=EOS_WORD,
-            pad_token=PAD_WORD)
+    def _read_not_src(self, sequences, side):
+        for i, seq in enumerate(sequences):
+            if isinstance(seq, six.binary_type):
+                seq = seq.decode("utf-8")
 
-        # def make_src(data, vocab):
-        #     """ ? """
-        #     src_size = max([t.size(0) for t in data])
-        #     src_vocab_size = max([t.max() for t in data]) + 1
-        #     alignment = torch.zeros(src_size, len(data), src_vocab_size)
-        #     for i, sent in enumerate(data):
-        #         for j, t in enumerate(sent):
-        #             alignment[j, i, t] = 1
-        #     return alignment
+            tok = [t.text for t in self.spacy[side](seq)]
+            yield {side: tok, 'indices': i}
 
-        # fields["src_map"] = torchtext.data.Field(
-        #     use_vocab=False, dtype=torch.float,
-        #     postprocessing=make_src, sequential=False)
+    def _read_src(self, sequences):
+        for docid, doc_in in itertools.groupby((l.split('\t', maxsplit=1) for l in sequences), key=lambda t: t[0]):
+            tok_src = [[t.text for t in self.spacy['src'](snt)] for _, snt in doc_in]
+            logger.info('Document %s: %d segments' % (docid, len(tok_src)))
 
-        # def make_tgt(data, vocab):
-        #     """ ? """
-        #     tgt_size = max([t.size(0) for t in data])
-        #     alignment = torch.zeros(tgt_size, len(data)).long()
-        #     for i, sent in enumerate(data):
-        #         alignment[:sent.size(0), i] = sent
-        #     return alignment
+            try:
+                doc = self.doc_builder.make_document(docid.rstrip('\n'), tok_src)
+            except Exception as err:
+                # AllenNLP sometimes fails on weird data (e.g., single-sentence docs without any mentions)
+                logger.error('Document creation failed. Skipping document.')
+                traceback.print_exc()
+                continue
 
-        # fields["alignment"] = torchtext.data.Field(
-        #     use_vocab=False, dtype=torch.long,
-        #     postprocessing=make_tgt, sequential=False)
-
-        fields["indices"] = torchtext.data.Field(
-            use_vocab=False, dtype=torch.long,
-            sequential=False)
-
-        return fields
-
-    @staticmethod
-    def get_num_features(corpus_file, side):
-        return 0
+            for i, s in enumerate(tok_src):
+                yield {'src': (s, doc.coref_per_snt[i]), 'indices': i}
 
 
 class DocumentBuilder:
@@ -230,7 +206,7 @@ class DocumentBuilder:
             self.coref_model = coref_model.model
             self.coref_model.eval()
 
-    def make_document(self, docid, tok_src, tok_tgt):
+    def make_document(self, docid, tok_src):
         instance = self.dataset_reader.text_to_instance(tok_src)
         if self.coref_model is not None:
             coref_pred = self.coref_model.forward_on_instance(instance)
@@ -269,71 +245,20 @@ class Document:
         self.coref_per_snt = coref_per_snt
 
 
-def create_coref_datasets(src_iter, tgt_iter, docid_iter, fields=None, shard_size=None,
-                          use_filter_pred=True, src_seq_length=50, tgt_seq_length=50,
-                          src_lang='en', tgt_lang='fr', run_coref=None):
-    spacy_src = spacy.load(src_lang, disable=['parser', 'tagger', 'ner'])
-    spacy_tgt = spacy.load(tgt_lang, disable=['parser', 'tagger', 'ner'])
+def coref_fields(**kwargs):
+    """Create coref fields.
 
-    if shard_size is None:
-        shard_size = sys.maxsize
-    current_shard_size = 0
-    index_in_shard = 0
-    examples = []
+    Args:
+        base_name (str): Name associated with the field.
+        n_feats (int): Number of word level feats (not counting the tokens)
+        include_lengths (bool): Optionally return the sequence lengths.
+        pad (str, optional): Defaults to ``"<blank>"``.
+        bos (str or NoneType, optional): Defaults to ``"<s>"``.
+        eos (str or NoneType, optional): Defaults to ``"</s>"``.
+        truncate (bool or NoneType, optional): Defaults to ``None``.
 
-    if fields is None:
-        fields = CorefDataset.get_fields(1000, 1000)
-
-    doc_builder = DocumentBuilder(run_coref)
-
-    def filter_pred(example):
-        """ ? """
-        return 0 < len(example.src) <= src_seq_length and 0 < len(example.tgt) <= tgt_seq_length
-
-    filter_pred = filter_pred if use_filter_pred else lambda x: True
-
-    if tgt_iter is None:
-        has_target = False
-        tgt_iter = itertools.repeat(None)
-    else:
-        has_target = True
-
-    tok_tgt = None
-    stripped_docid_iter = (docid_line.split()[0] for docid_line in docid_iter)
-    for docid, doc_in in itertools.groupby(zip(stripped_docid_iter, src_iter, tgt_iter), key=lambda t: t[0]):
-        l_doc_in = list(doc_in)
-        logger.info('Document %s: %d segments' % (docid, len(l_doc_in)))
-        tok_src = [[t.text for t in spacy_src(snt_src.rstrip('\n'))] for _, snt_src, _ in l_doc_in]
-        if has_target:
-            tok_tgt = [[t.text for t in spacy_tgt(snt_tgt.rstrip('\n'))] for _, _, snt_tgt in l_doc_in]
-
-        try:
-            doc = doc_builder.make_document(docid.rstrip('\n'), tok_src, tok_tgt)
-        except Exception as err:
-            # AllenNLP sometimes fails on weird data (e.g., single-sentence docs without any mentions)
-            logger.error('Document creation failed. Skipping document.')
-            traceback.print_exc()
-            continue
-
-        for i, (s, t) in enumerate(zip(tok_src, tok_tgt)):
-            ex = torchtext.data.Example()
-            ex.src = fields['src'].preprocess((s, doc.coref_per_snt[i]))
-            ex.tgt = fields['tgt'].preprocess(t)
-            ex.indices = fields['indices'].preprocess(index_in_shard)
-            ex.docid = doc.docid
-            ex.snt_in_doc = i
-            examples.append(ex)
-            index_in_shard += 1
-
-        current_shard_size += sum(len(snt_src) - 1 for _, snt_src, _ in l_doc_in)
-
-        if current_shard_size >= shard_size:
-            yield CorefDataset(examples, fields, filter_pred)
-            current_shard_size = 0
-            index_in_shard = 0
-            examples = []
-
-    if examples:
-        yield CorefDataset(examples, fields, filter_pred)
-
+    Returns:
+        CorefField
+    """
+    return CorefField(**kwargs)
 

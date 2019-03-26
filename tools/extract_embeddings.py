@@ -1,9 +1,10 @@
-from __future__ import division
-import torch
 import argparse
+
+import torch
+
 import onmt
 import onmt.model_builder
-import onmt.inputters
+import onmt.inputters as inputters
 import onmt.opts
 
 from onmt.utils.misc import use_gpu
@@ -41,10 +42,14 @@ def main():
     checkpoint = torch.load(opt.model,
                             map_location=lambda storage, loc: storage)
     model_opt = checkpoint['opt']
-    src_dict = checkpoint['vocab'][1][1]
-    tgt_dict = checkpoint['vocab'][0][1]
 
-    fields = onmt.inputters.load_fields_from_vocab(checkpoint['vocab'], opt)
+    vocab = checkpoint['vocab']
+    if inputters.old_style_vocab(vocab):
+        fields = onmt.inputters.load_old_vocab(vocab)
+    else:
+        fields = vocab
+    src_dict = fields['src'].base_field.vocab  # assumes src is text
+    tgt_dict = fields['tgt'].base_field.vocab
 
     model_opt = checkpoint['opt']
     for arg in dummy_opt.__dict__:

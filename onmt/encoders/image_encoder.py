@@ -1,13 +1,13 @@
-""" Image Encoder """
+"""Image Encoder."""
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
+from onmt.encoders.encoder import EncoderBase
 
-class ImageEncoder(nn.Module):
-    """
-    A simple encoder convolutional -> recurrent neural network for
-    image src.
+
+class ImageEncoder(EncoderBase):
+    """A simple encoder CNN -> RNN for image src.
 
     Args:
         num_layers (int): number of encoder layers.
@@ -16,13 +16,14 @@ class ImageEncoder(nn.Module):
         dropout (float): dropout probablity.
     """
 
-    def __init__(self, num_layers, bidirectional, rnn_size, dropout):
+    def __init__(self, num_layers, bidirectional, rnn_size, dropout,
+                 image_chanel_size=3):
         super(ImageEncoder, self).__init__()
         self.num_layers = num_layers
         self.num_directions = 2 if bidirectional else 1
         self.hidden_size = rnn_size
 
-        self.layer1 = nn.Conv2d(3, 64, kernel_size=(3, 3),
+        self.layer1 = nn.Conv2d(image_chanel_size, 64, kernel_size=(3, 3),
                                 padding=(1, 1), stride=(1, 1))
         self.layer2 = nn.Conv2d(64, 128, kernel_size=(3, 3),
                                 padding=(1, 1), stride=(1, 1))
@@ -40,23 +41,41 @@ class ImageEncoder(nn.Module):
         self.batch_norm3 = nn.BatchNorm2d(512)
 
         src_size = 512
-        self.rnn = nn.LSTM(src_size, rnn_size,
+        self.rnn = nn.LSTM(src_size, int(rnn_size / self.num_directions),
                            num_layers=num_layers,
                            dropout=dropout,
                            bidirectional=bidirectional)
         self.pos_lut = nn.Embedding(1000, src_size)
 
+    @classmethod
+    def from_opt(cls, opt, embeddings=None):
+        """Alternate constructor."""
+        if embeddings is not None:
+            raise ValueError("Cannot use embeddings with ImageEncoder.")
+        # why is the model_opt.__dict__ check necessary?
+        if "image_channel_size" not in opt.__dict__:
+            image_channel_size = 3
+        else:
+            image_channel_size = opt.image_channel_size
+        return cls(
+            opt.enc_layers,
+            opt.brnn,
+            opt.enc_rnn_size,
+            opt.dropout,
+            image_channel_size
+        )
+
     def load_pretrained_vectors(self, opt):
-        """ Pass in needed options only when modify function definition."""
+        """Pass in needed options only when modify function definition."""
         pass
 
     def forward(self, src, lengths=None):
-        "See :obj:`onmt.encoders.encoder.EncoderBase.forward()`"
+        """See :func:`onmt.encoders.encoder.EncoderBase.forward()`"""
 
         batch_size = src.size(0)
         # (batch_size, 64, imgH, imgW)
         # layer 1
-        src = F.relu(self.layer1(src[:, :, :, :]-0.5), True)
+        src = F.relu(self.layer1(src[:, :, :, :] - 0.5), True)
 
         # (batch_size, 64, imgH/2, imgW/2)
         src = F.max_pool2d(src, kernel_size=(2, 2), stride=(2, 2))
@@ -94,10 +113,10 @@ class ImageEncoder(nn.Module):
         # # (batch_size, 512, H, W)
         all_outputs = []
         for row in range(src.size(2)):
-            inp = src[:, :, row, :].transpose(0, 2)\
+            inp = src[:, :, row, :].transpose(0, 2) \
                 .transpose(1, 2)
-            row_vec = torch.Tensor(batch_size).type_as(inp.data)\
-                                              .long().fill_(row)
+            row_vec = torch.Tensor(batch_size).type_as(inp.data) \
+                .long().fill_(row)
             pos_emb = self.pos_lut(row_vec)
             with_pos = torch.cat(
                 (pos_emb.view(1, pos_emb.size(0), pos_emb.size(1)), inp), 0)
@@ -105,4 +124,4 @@ class ImageEncoder(nn.Module):
             all_outputs.append(outputs)
         out = torch.cat(all_outputs, 0)
 
-        return hidden_t, out
+        return hidden_t, out, lengths

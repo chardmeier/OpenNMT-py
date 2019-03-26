@@ -1,7 +1,9 @@
-""" Global attention modules (Luong / Bahdanau) """
+"""Global attention modules (Luong / Bahdanau)"""
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
+from onmt.modules.sparse_activations import sparsemax
 from onmt.utils.misc import aeq, sequence_mask
 
 # This class is mainly used by decoder.py for RNNs but also
@@ -11,7 +13,7 @@ from onmt.utils.misc import aeq, sequence_mask
 
 
 class GlobalAttention(nn.Module):
-    """
+    r"""
     Global attention takes a matrix and a query vector. It
     then computes a parameterized convex combination of the matrix
     based on the input query.
@@ -42,7 +44,7 @@ class GlobalAttention(nn.Module):
           F --> G
 
     All models compute the output as
-    :math:`c = sum_{j=1}^{SeqLength} a_j H_j` where
+    :math:`c = \sum_{j=1}^{\text{SeqLength}} a_j H_j` where
     :math:`a_j` is the softmax of a score function.
     Then then apply a projection layer to [q, c].
 
@@ -50,28 +52,34 @@ class GlobalAttention(nn.Module):
     differ on how they compute the attention score.
 
     * Luong Attention (dot, general):
-       * dot: :math:`score(H_j,q) = H_j^T q`
-       * general: :math:`score(H_j, q) = H_j^T W_a q`
+       * dot: :math:`\text{score}(H_j,q) = H_j^T q`
+       * general: :math:`\text{score}(H_j, q) = H_j^T W_a q`
 
 
     * Bahdanau Attention (mlp):
-       * :math:`score(H_j, q) = v_a^T tanh(W_a q + U_a h_j)`
+       * :math:`\text{score}(H_j, q) = v_a^T \text{tanh}(W_a q + U_a h_j)`
 
 
     Args:
        dim (int): dimensionality of query and key
        coverage (bool): use coverage term
        attn_type (str): type of attention to use, options [dot,general,mlp]
+       attn_func (str): attention function to use, options [softmax,sparsemax]
 
     """
 
-    def __init__(self, dim, coverage=False, attn_type="dot"):
+    def __init__(self, dim, coverage=False, attn_type="dot",
+                 attn_func="softmax"):
         super(GlobalAttention, self).__init__()
 
         self.dim = dim
+        assert attn_type in ["dot", "general", "mlp"], (
+            "Please select a valid attention type (got {:s}).".format(
+                attn_type))
         self.attn_type = attn_type
-        assert (self.attn_type in ["dot", "general", "mlp"]), (
-            "Please select a valid attention type.")
+        assert attn_func in ["softmax", "sparsemax"], (
+            "Please select a valid attention function.")
+        self.attn_func = attn_func
 
         if self.attn_type == "general":
             self.linear_in = nn.Linear(dim, dim, bias=False)
@@ -83,23 +91,18 @@ class GlobalAttention(nn.Module):
         out_bias = self.attn_type == "mlp"
         self.linear_out = nn.Linear(dim * 2, dim, bias=out_bias)
 
-        self.softmax = nn.Softmax(dim=-1)
-        self.tanh = nn.Tanh()
-
         if coverage:
             self.linear_cover = nn.Linear(1, dim, bias=False)
 
     def score(self, h_t, h_s):
         """
         Args:
-          h_t (`FloatTensor`): sequence of queries `[batch x tgt_len x dim]`
-          h_s (`FloatTensor`): sequence of sources `[batch x src_len x dim]`
+          h_t (FloatTensor): sequence of queries ``(batch, tgt_len, dim)``
+          h_s (FloatTensor): sequence of sources ``(batch, src_len, dim``
 
         Returns:
-          :obj:`FloatTensor`:
-           raw attention scores (unnormalized) for each src index
-          `[batch x tgt_len x src_len]`
-
+          FloatTensor: raw attention scores (unnormalized) for each src index
+            ``(batch, tgt_len, src_len)``
         """
 
         # Check input sizes
@@ -128,7 +131,7 @@ class GlobalAttention(nn.Module):
             uh = uh.expand(src_batch, tgt_len, src_len, dim)
 
             # (batch, t_len, s_len, d)
-            wquh = self.tanh(wq + uh)
+            wquh = torch.tanh(wq + uh)
 
             return self.v(wquh.view(-1, dim)).view(tgt_batch, tgt_len, src_len)
 
@@ -136,17 +139,17 @@ class GlobalAttention(nn.Module):
         """
 
         Args:
-          source (`FloatTensor`): query vectors `[batch x tgt_len x dim]`
-          memory_bank (`FloatTensor`): source vectors `[batch x src_len x dim]`
-          memory_lengths (`LongTensor`): the source context lengths `[batch]`
-          coverage (`FloatTensor`): None (not supported yet)
+          source (FloatTensor): query vectors ``(batch, tgt_len, dim)``
+          memory_bank (FloatTensor): source vectors ``(batch, src_len, dim)``
+          memory_lengths (LongTensor): the source context lengths ``(batch,)``
+          coverage (FloatTensor): None (not supported yet)
 
         Returns:
-          (`FloatTensor`, `FloatTensor`):
+          (FloatTensor, FloatTensor):
 
-          * Computed vector `[tgt_len x batch x dim]`
+          * Computed vector ``(tgt_len, batch, dim)``
           * Attention distribtutions for each query
-             `[tgt_len x batch x src_len]`
+            ``(tgt_len, batch, src_len)``
         """
 
         # one step input
@@ -169,7 +172,7 @@ class GlobalAttention(nn.Module):
         if coverage is not None:
             cover = coverage.view(-1).unsqueeze(1)
             memory_bank += self.linear_cover(cover).view_as(memory_bank)
-            memory_bank = self.tanh(memory_bank)
+            memory_bank = torch.tanh(memory_bank)
 
         # compute attention scores, as in Luong et al.
         align = self.score(source, memory_bank)
@@ -179,8 +182,11 @@ class GlobalAttention(nn.Module):
             mask = mask.unsqueeze(1)  # Make it broadcastable.
             align.masked_fill_(1 - mask, -float('inf'))
 
-        # Softmax to normalize attention weights
-        align_vectors = self.softmax(align.view(batch*target_l, source_l))
+        # Softmax or sparsemax to normalize attention weights
+        if self.attn_func == "softmax":
+            align_vectors = F.softmax(align.view(batch*target_l, source_l), -1)
+        else:
+            align_vectors = sparsemax(align.view(batch*target_l, source_l), -1)
         align_vectors = align_vectors.view(batch, target_l, source_l)
 
         # each context vector c_t is the weighted average
@@ -191,7 +197,7 @@ class GlobalAttention(nn.Module):
         concat_c = torch.cat([c, source], 2).view(batch*target_l, dim*2)
         attn_h = self.linear_out(concat_c).view(batch, target_l, dim)
         if self.attn_type in ["general", "dot"]:
-            attn_h = self.tanh(attn_h)
+            attn_h = torch.tanh(attn_h)
 
         if one_step:
             attn_h = attn_h.squeeze(1)
