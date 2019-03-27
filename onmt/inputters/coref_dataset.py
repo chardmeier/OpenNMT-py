@@ -27,6 +27,7 @@ class CorefField(torchtext.data.RawField):
         self.max_mentions_before = kwargs.pop('max_mentions_before', 1000)
         self.max_mentions_after = kwargs.pop('max_mentions_after', 1000)
 
+        self.name = kwargs.get('base_name')
         self.src_field = torchtext.data.Field(init_token=kwargs.get('bos'), eos_token=kwargs.get('eos'),
                                               pad_token=kwargs.get('pad'),
                                               include_lengths=kwargs.get('include_lengths'))
@@ -36,6 +37,10 @@ class CorefField(torchtext.data.RawField):
         self.eos_token = self.src_field.eos_token
         self.vocab = None
         self.span_emb_size = 1220
+
+    def __iter__(self):
+        # this is to be compatible with a single-entry TextMultiField
+        yield self.name, self.src_field
 
     @property
     def vocab(self):
