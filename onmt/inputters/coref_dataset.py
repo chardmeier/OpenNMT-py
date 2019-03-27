@@ -184,12 +184,13 @@ class CorefDataReader(DataReaderBase):
             yield {side: tok, 'indices': i}
 
     def _read_src(self, sequences):
-        for docid, doc_in in itertools.groupby((l.split(b'\t', maxsplit=1) for l in sequences), key=lambda t: t[0]):
+        for b_docid, doc_in in itertools.groupby((l.split(b'\t', maxsplit=1) for l in sequences), key=lambda t: t[0]):
             tok_src = [[t.text for t in self.spacy['src'](snt.decode('utf-8'))] for _, snt in doc_in]
+            docid = b_docid.decode('utf-8')
             logger.info('Document %s: %d segments' % (docid, len(tok_src)))
 
             try:
-                doc = self.doc_builder.make_document(docid.rstrip('\n'), tok_src)
+                doc = self.doc_builder.make_document(docid, tok_src)
             except Exception as err:
                 # AllenNLP sometimes fails on weird data (e.g., single-sentence docs without any mentions)
                 logger.error('Document creation failed. Skipping document.')
