@@ -184,8 +184,8 @@ class CorefDataReader(DataReaderBase):
             yield {side: tok, 'indices': i}
 
     def _read_src(self, sequences):
-        for docid, doc_in in itertools.groupby((l.split('\t', maxsplit=1) for l in sequences), key=lambda t: t[0]):
-            tok_src = [[t.text for t in self.spacy['src'](snt)] for _, snt in doc_in]
+        for docid, doc_in in itertools.groupby((l.split(b'\t', maxsplit=1) for l in sequences), key=lambda t: t[0]):
+            tok_src = [[t.text for t in self.spacy['src'](snt.decode('utf-8'))] for _, snt in doc_in]
             logger.info('Document %s: %d segments' % (docid, len(tok_src)))
 
             try:
