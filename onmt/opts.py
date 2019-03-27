@@ -294,6 +294,10 @@ def preprocess_opts(parser):
               choices=StoreLoggingLevelAction.CHOICES,
               default="0")
 
+    # Options most relevant to coref
+    group.add('--run_coref', '-run_coref',
+              help='Run coreference resolver during preprocessing. Takes model as parameter.')
+
     # Options most relevant to speech
     group = parser.add_argument_group('Speech')
     group.add('--sample_rate', '-sample_rate', type=int, default=16000,
@@ -543,7 +547,7 @@ def translate_opts(parser):
               help="Path to model .pt file(s). "
                    "Multiple models can be specified, "
                    "for ensemble decoding.")
-    group.add('-run_coref',
+    group.add('--run_coref', '-run_coref',
               help='Run coreference resolver during preprocessing. Takes model as parameter.')
     group.add('--fp32', '-fp32', action='store_true',
               help="Force the model to be in FP32 "
