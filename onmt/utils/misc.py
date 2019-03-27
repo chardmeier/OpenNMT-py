@@ -54,6 +54,9 @@ def make_shards(src_path, tgt_path, shard_size, docid_path=None):
                         src_shard = []
                         tgt_shard = []
 
+            if src_shard:
+                yield src_shard, tgt_shard
+
 
 def aeq(*args):
     """
