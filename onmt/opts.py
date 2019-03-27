@@ -198,6 +198,9 @@ def preprocess_opts(parser):
               help="Type of the source input. "
                    "Options are [text|img|audio].")
 
+    group.add('--src_lang', '-src_lang', default='en', help='Source language.')
+    group.add('--tgt_lang', '-tgt_lang', default='fr', help='Target language.')
+
     group.add('--train_src', '-train_src', required=True,
               help="Path to the training source data")
     group.add('--train_tgt', '-train_tgt', required=True,
