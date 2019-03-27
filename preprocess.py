@@ -11,7 +11,7 @@ import torch
 from functools import partial
 
 from onmt.utils.logging import init_logger, logger
-from onmt.utils.misc import split_corpus
+from onmt.utils.misc import make_shards
 import onmt.inputters as inputters
 import onmt.opts as opts
 from onmt.utils.parse import ArgumentParser
@@ -40,9 +40,7 @@ def build_save_dataset(corpus_type, fields, src_reader, tgt_reader, opt):
 
     logger.info("Reading source and target files: %s %s." % (src, tgt))
 
-    src_shards = split_corpus(src, opt.shard_size)
-    tgt_shards = split_corpus(tgt, opt.shard_size)
-    shard_pairs = zip(src_shards, tgt_shards)
+    shard_pairs = make_shards(src, tgt, opt.shard_size, docid_path=opt.docids)
     dataset_paths = []
     if (corpus_type == "train" or opt.filter_valid) and tgt is not None:
         filter_pred = partial(

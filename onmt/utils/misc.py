@@ -1,21 +1,58 @@
 # -*- coding: utf-8 -*-
 
+import contextlib
+import itertools
 import torch
 import random
 import inspect
-from itertools import islice
 
 
-def split_corpus(path, shard_size):
-    with open(path, "rb") as f:
-        if shard_size <= 0:
-            yield f.readlines()
+def make_shards(src_path, tgt_path, shard_size, docid_path=None):
+    with contextlib.ExitStack() as stack:
+        f_src = stack.enter_context(open(src_path, 'rb'))
+
+        if tgt_path is not None:
+            f_tgt = stack.enter_context(open(tgt_path, 'rb'))
         else:
-            while True:
-                shard = list(islice(f, shard_size))
-                if not shard:
-                    break
-                yield shard
+            f_tgt = itertools.repeat(None)
+
+        if docid_path is not None:
+            f_docid = stack.enter_context(open(docid_path, 'r'))
+        else:
+            f_docid = itertools.repeat(None)
+
+        if shard_size <= 0:
+            yield zip(f_src.readlines(), f_tgt.readlines())
+        else:
+            src_shard = []
+            tgt_shard = []
+            docid_prefix = ''
+            finish_doc = None
+            for l_src, l_tgt, l_docid in zip(f_src, f_tgt, f_docid):
+                if docid_path is not None:
+                    docid_prefix = l_docid.rstrip('\n') + '\t'
+
+                if finish_doc is not None:
+                    if docid_prefix == finish_doc:
+                        src_shard.append(docid_prefix + l_src)
+                        tgt_shard.append(l_tgt)
+                        continue
+                    else:
+                        yield src_shard, tgt_shard
+                        finish_doc = None
+                        src_shard = []
+                        tgt_shard = []
+
+                if len(src_shard) < shard_size:
+                    src_shard.append(docid_prefix + l_src)
+                    tgt_shard.append(l_tgt)
+                else:
+                    if docid_path is not None:
+                        finish_doc = docid_prefix
+                    else:
+                        yield src_shard, tgt_shard
+                        src_shard = []
+                        tgt_shard = []
 
 
 def aeq(*args):
