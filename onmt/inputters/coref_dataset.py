@@ -26,7 +26,9 @@ class CorefField(torchtext.data.RawField):
         self.max_mentions_before = kwargs.pop('max_mentions_before', 1000)
         self.max_mentions_after = kwargs.pop('max_mentions_after', 1000)
 
-        self.src_field = torchtext.data.Field(*args, **kwargs)
+        self.src_field = torchtext.data.Field(init_token=kwargs.get('bos'), eos_token=kwargs.get('eos'),
+                                              pad_token=kwargs.get('pad'), tokenize=False,
+                                              include_lengths=kwargs.get('include_lengths'))
         self.unk_token = self.src_field.unk_token
         self.pad_token = self.src_field.pad_token
         self.init_token = self.src_field.init_token
