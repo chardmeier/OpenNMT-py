@@ -561,7 +561,7 @@ def translate_opts(parser):
                    "sequence)")
     group.add('--src_dir', '-src_dir', default="",
               help='Source directory for image or audio files')
-    group.add('-docids', help='Document IDs (for coref_transformer).')
+    group.add('--docids', '-docids', help='Document IDs (for coref_transformer).')
     group.add('--tgt', '-tgt',
               help='True target sequence (optional)')
     group.add('--shard_size', '-shard_size', type=int, default=10000,
