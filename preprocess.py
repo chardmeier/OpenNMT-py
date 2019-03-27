@@ -34,13 +34,15 @@ def build_save_dataset(corpus_type, fields, src_reader, tgt_reader, opt):
     if corpus_type == 'train':
         src = opt.train_src
         tgt = opt.train_tgt
+        docids = opt.train_docids
     else:
         src = opt.valid_src
         tgt = opt.valid_tgt
+        docids = opt.valid_docids
 
     logger.info("Reading source and target files: %s %s." % (src, tgt))
 
-    shard_pairs = make_shards(src, tgt, opt.shard_size, docid_path=opt.docids)
+    shard_pairs = make_shards(src, tgt, opt.shard_size, docid_path=docids)
     dataset_paths = []
     if (corpus_type == "train" or opt.filter_valid) and tgt is not None:
         filter_pred = partial(

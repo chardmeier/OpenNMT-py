@@ -202,10 +202,14 @@ def preprocess_opts(parser):
               help="Path to the training source data")
     group.add('--train_tgt', '-train_tgt', required=True,
               help="Path to the training target data")
+    group.add('--train_docids', '-train_docids',
+              help="Path to the training document IDs (for coref)")
     group.add('--valid_src', '-valid_src',
               help="Path to the validation source data")
     group.add('--valid_tgt', '-valid_tgt',
               help="Path to the validation target data")
+    group.add('--valid_docids', '-valid_docids',
+              help="Path to the validation document IDs (for coref)")
 
     group.add('--src_dir', '-src_dir', default="",
               help="Source directory for image or audio files.")
