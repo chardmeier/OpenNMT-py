@@ -137,7 +137,6 @@ class CorefDataReader(DataReaderBase):
                       'tgt': spacy.load(tgt_lang, disable=['parser', 'tagger', 'ner'])}
         self.doc_builder = DocumentBuilder(run_coref)
 
-
     @classmethod
     def from_opt(cls, opt):
         return cls(opt.src_lang, opt.tgt_lang, opt.run_coref)
