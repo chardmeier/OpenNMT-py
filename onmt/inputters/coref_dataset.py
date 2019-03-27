@@ -11,6 +11,7 @@ import torch
 import torchtext
 
 import allennlp.data
+import allennlp.models
 
 from onmt.inputters.datareader_base import DataReaderBase
 from onmt.utils.logging import logger
@@ -195,11 +196,14 @@ class CorefDataReader(DataReaderBase):
 
 
 class DocumentBuilder:
-    def __init__(self, coref_model, max_span_width=10):
-        if coref_model is None:
+    def __init__(self, coref_path, max_span_width=10):
+        if coref_path is None:
             self.dataset_reader = allennlp.data.DatasetReader.by_name('coref')(max_span_width)
             self.coref_model = None
         else:
+            logger.info('Loading coref model from %s.' % coref_path)
+            coref_model = allennlp.models.load_archive(coref_path)
+
             config = coref_model.config.duplicate()
             dataset_reader_params = config['dataset_reader']
             self.dataset_reader = allennlp.data.DatasetReader.from_params(dataset_reader_params)
