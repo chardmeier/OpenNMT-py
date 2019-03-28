@@ -61,7 +61,7 @@ very sensitive to hyperparameters. The hyperparameter values below are taken
 from there and should correspond to those used by Vaswani et al.
 
 ```
-python OpenNMT-py/train.py -gpuid 0 \
+python OpenNMT-py/train.py -world_size 1 -gpu_ranks 0 \
         -valid_steps 5000 \
         -data data_prefix -save_model model_path \
         -layers 6 -rnn_size 512 -word_vec_size 512 \
@@ -75,3 +75,16 @@ python OpenNMT-py/train.py -gpuid 0 \
 
 Here, `data_prefix` is the pointer to where the preprocessed data files are
 stored, and `model_path` is the prefix for saving the model.
+
+Translation
+-----------
+
+This is the command to call for translation at test time:
+```
+python OpenNMT-py/translate.py \
+    -model model_path \
+    -src testcorpus.en -tgt testcorpus.fr -docids testcorpus.docids \
+    -output translation.fr \
+    -data_type coref -run_coref coref-model-2018.02.05.tar.gz \
+    -replace_unk -report_bleu
+```
