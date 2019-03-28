@@ -202,4 +202,4 @@ class CorefTransformerEncoder(EncoderBase):
         out = self.context_layer(out, context, mask)
 
         out = self.layer_norm(out)
-        return emb, out.transpose(0, 1).contiguous()
+        return emb, out.transpose(0, 1).contiguous(), lengths

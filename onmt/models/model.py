@@ -46,7 +46,7 @@ class NMTModel(nn.Module):
                 src_text = src[0]
             else:
                 src_text = src
-            self.decoder.init_state(src, memory_bank, enc_state)
+            self.decoder.init_state(src_text, memory_bank, enc_state)
         dec_out, attns = self.decoder(tgt, memory_bank,
                                       memory_lengths=lengths)
         return dec_out, attns
