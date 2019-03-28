@@ -157,7 +157,12 @@ class TransformerDecoder(DecoderBase):
 
     def init_state(self, src, memory_bank, enc_hidden):
         """Initialize decoder state."""
-        self.state["src"] = src
+        if isinstance(src, tuple):
+            # coref src has extra information
+            src_text = src[0]
+        else:
+            src_text = src
+        self.state["src"] = src_text
         self.state["cache"] = None
 
     def map_state(self, fn):

@@ -41,12 +41,7 @@ class NMTModel(nn.Module):
 
         enc_state, memory_bank, lengths = self.encoder(src, lengths)
         if bptt is False:
-            if isinstance(src, tuple):
-                # coref src has extra information
-                src_text = src[0]
-            else:
-                src_text = src
-            self.decoder.init_state(src_text, memory_bank, enc_state)
+            self.decoder.init_state(src, memory_bank, enc_state)
         dec_out, attns = self.decoder(tgt, memory_bank,
                                       memory_lengths=lengths)
         return dec_out, attns
