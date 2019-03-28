@@ -2,6 +2,7 @@ import math
 import onmt
 import torch
 
+from onmt.inputters.coref_dataset import CorefField
 from onmt.encoders.encoder import EncoderBase
 
 
@@ -170,6 +171,18 @@ class CorefTransformerEncoder(EncoderBase):
              for _ in range(num_layers - 1)])
         self.context_layer = CorefTransformerLayer(d_model, d_context, heads, d_ff, dropout)
         self.layer_norm = onmt.modules.LayerNorm(d_model)
+
+    @classmethod
+    def from_opt(cls, opt, embeddings):
+        """Alternate constructor."""
+        return cls(
+            opt.enc_layers,
+            opt.enc_rnn_size,
+            CorefField.span_emb_size,
+            opt.heads,
+            opt.transformer_ff,
+            opt.dropout,
+            embeddings)
 
     def forward(self, inp, lengths=None):
         src, context = inp

@@ -21,6 +21,8 @@ class CorefField(torchtext.data.RawField):
     vocab_cls = torchtext.vocab.Vocab
     sequential = True
 
+    span_emb_size = 1220
+
     def __init__(self, *args, **kwargs):
         super(CorefField, self).__init__()
 
@@ -36,7 +38,6 @@ class CorefField(torchtext.data.RawField):
         self.init_token = self.src_field.init_token
         self.eos_token = self.src_field.eos_token
         self.vocab = None
-        self.span_emb_size = 1220
 
     def __iter__(self):
         # this is to be compatible with a single-entry TextMultiField
