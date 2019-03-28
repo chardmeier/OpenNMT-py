@@ -89,7 +89,7 @@ class CorefTransformerLayer(torch.nn.Module):
         self.positional_embeddings = CorefPositionalEncoding(d_model)
 
         self.feed_forward = onmt.modules.position_ffn.PositionwiseFeedForward(d_model, d_ff, dropout)
-        self.layer_norm = onmt.modules.LayerNorm(d_model)
+        self.layer_norm = torch.nn.LayerNorm(d_model, eps=1e-6)
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, inputs, coref_context, mask):
@@ -170,7 +170,7 @@ class CorefTransformerEncoder(EncoderBase):
             [onmt.encoders.transformer.TransformerEncoderLayer(d_model, heads, d_ff, dropout)
              for _ in range(num_layers - 1)])
         self.context_layer = CorefTransformerLayer(d_model, d_context, heads, d_ff, dropout)
-        self.layer_norm = onmt.modules.LayerNorm(d_model)
+        self.layer_norm = torch.nn.LayerNorm(d_model, eps=1e-6)
 
     @classmethod
     def from_opt(cls, opt, embeddings):
