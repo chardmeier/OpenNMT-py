@@ -68,8 +68,12 @@ class CorefField(torchtext.data.RawField):
             coref-mt system, see class `CorefContext`.
         """
         src_batch = self.src_field.process([x[0] for x in batch], device=device)
+        if self.src_field.include_lengths:
+            src_batch, lengths = src_batch
+        else:
+            lengths = None
 
-        pad_len = src_batch[0].shape[0]
+        pad_len = src_batch.shape[0]
 
         l_chain_map = []
         l_chain_start = []
@@ -111,7 +115,13 @@ class CorefField(torchtext.data.RawField):
 
         coref_context = CorefContext(chain_map, chain_start, span_embeddings,
                                      attention_mask, mention_pos_in_chain)
-        return src_batch, coref_context
+        # The unsqueeze is because we pretend to be a single-factor multi-field
+        out_batch = src_batch.unsqueeze(-1), coref_context
+
+        if self.src_field.include_lengths:
+            return out_batch, lengths
+        else:
+            return out_batch
 
 
 class CorefContext:
