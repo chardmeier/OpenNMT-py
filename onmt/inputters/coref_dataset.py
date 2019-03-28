@@ -152,8 +152,11 @@ def coref_sort_key(ex):
 
 class CorefDataReader(DataReaderBase):
     def __init__(self, src_lang, tgt_lang, run_coref):
-        self.spacy = {'src': spacy.load(src_lang, disable=['parser', 'tagger', 'ner']),
-                      'tgt': spacy.load(tgt_lang, disable=['parser', 'tagger', 'ner'])}
+        logger.info('Loading Spacy model for %s' % src_lang)
+        spacy_src = spacy.load(src_lang, disable=['parser', 'tagger', 'ner'])
+        logger.info('Loading Spacy model for %s' % tgt_lang)
+        spacy_tgt = spacy.load(tgt_lang, disable=['parser', 'tagger', 'ner'])
+        self.spacy = {'src': spacy_src, 'tgt': spacy_tgt}
         self.doc_builder = DocumentBuilder(run_coref)
 
     @classmethod
