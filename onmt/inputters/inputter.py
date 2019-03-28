@@ -335,13 +335,6 @@ def build_vocab(train_dataset_files, fields, data_type, share_vocab,
     Returns:
         Dict of Fields
     """
-    if data_type == 'coref':
-        def get_src(x):
-            return x[0]
-    else:
-        def get_src(x):
-            return x
-
     counters = defaultdict(Counter)
 
     if src_vocab_path:
@@ -386,8 +379,7 @@ def build_vocab(train_dataset_files, fields, data_type, share_vocab,
                     has_vocab = (sub_n == 'src' and src_vocab) or \
                                 (sub_n == 'tgt' and tgt_vocab)
                     if sub_f.sequential and not has_vocab:
-                        val = get_src(fd)
-                        counters[sub_n].update(val)
+                        counters[sub_n].update(fd)
 
         # Drop the none-using from memory but keep the last
         if i < len(train_dataset_files) - 1:
