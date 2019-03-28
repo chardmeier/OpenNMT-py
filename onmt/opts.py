@@ -550,6 +550,8 @@ def translate_opts(parser):
               help="Path to model .pt file(s). "
                    "Multiple models can be specified, "
                    "for ensemble decoding.")
+    group.add('--src_lang', '-src_lang', default='en', help='Source language.')
+    group.add('--tgt_lang', '-tgt_lang', default='fr', help='Target language.')
     group.add('--run_coref', '-run_coref',
               help='Run coreference resolver during preprocessing. Takes model as parameter.')
     group.add('--fp32', '-fp32', action='store_true',
