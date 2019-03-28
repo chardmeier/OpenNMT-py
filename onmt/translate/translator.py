@@ -617,7 +617,12 @@ class Translator(object):
 
         # (1) Run the encoder on the src.
         src, enc_states, memory_bank, src_lengths = self._run_encoder(batch)
-        self.model.decoder.init_state(src, memory_bank, enc_states)
+        if isinstance(src, tuple):
+            # coref src has extra information
+            src_text = src[0]
+        else:
+            src_text = src
+        self.model.decoder.init_state(src_text, memory_bank, enc_states)
 
         results = {
             "predictions": None,
