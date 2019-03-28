@@ -7,8 +7,8 @@ Installation
 1. Clone the patched versions of _OpenNMT_ and _AllenNLP_ from Github:
 
    ```
-   git clone -b coref-mt https://github.com/chardmeier/OpenNMT-py
-   git clone -b coref-mt https://github.com/chardmeier/allennlp
+   git clone -b coref-mt-upd https://github.com/chardmeier/OpenNMT-py
+   git clone -b coref-mt-upd https://github.com/chardmeier/allennlp
    ```
 
 2. Install all required prerequisites for the two libraries according to
@@ -33,19 +33,18 @@ The first two files contain the sentence-aligned source and target text.
 The third file contains a document identifier for each sentence in the corpus.
 Documents define the scope of coreference resolution. Note that sentences
 belonging to a document must be grouped together and ordered in the input
-files. If the corpus files have a `.gz` extension, they are assumed to be
-compressed.
+files.
 
 Preprocessing of the input corpora consists of tokenisation (using _Spacy_),
 coreference resolution (using _AllenNLP_) and conversion into the data structures
 required by _OpenNMT_. It is done as follows:
 
 ```
-python OpenNMT-py/preprocess_coref.py \
-    -train training.en training.fr training.docids \
-    -valid valid.en valid.fr valid.docids \
+python OpenNMT-py/preprocess.py \
+    -train_src training.en -train_tgt training.fr -train_docids training.docids \
+    -valid_src valid.en -valid_tgt valid.fr -valid_docids valid.docids \
     -run_coref coref-model-2018.02.05.tar.gz \
-    -save data_prefix
+    -save_data data_prefix
 ```
 
 This will run for a while and generate a number of files whose names start
