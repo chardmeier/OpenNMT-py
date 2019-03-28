@@ -274,6 +274,7 @@ class Translator(object):
             self,
             src,
             tgt=None,
+            tgt_path=None,
             src_dir=None,
             batch_size=None,
             attn_debug=False):
@@ -282,6 +283,7 @@ class Translator(object):
         Args:
             src: See :func:`self.src_reader.read()`.
             tgt: See :func:`self.tgt_reader.read()`.
+            tgt_path: Path of file containing reference translation (for BLEU and ROUGE scoring).
             src_dir: See :func:`self.src_reader.read()` (only relevant
                 for certain types of data).
             batch_size (int): size of examples per mini-batch
@@ -391,11 +393,13 @@ class Translator(object):
                 msg = self._report_score('GOLD', gold_score_total,
                                          gold_words_total)
                 self._log(msg)
+
+            if tgt_path is not None:
                 if self.report_bleu:
-                    msg = self._report_bleu(tgt)
+                    msg = self._report_bleu(tgt_path)
                     self._log(msg)
                 if self.report_rouge:
-                    msg = self._report_rouge(tgt)
+                    msg = self._report_rouge(tgt_path)
                     self._log(msg)
 
         if self.report_time:

@@ -24,6 +24,7 @@ def main(opt):
         translator.translate(
             src=src_shard,
             tgt=tgt_shard,
+            tgt_path=opt.tgt,
             src_dir=opt.src_dir,
             batch_size=opt.batch_size,
             attn_debug=opt.attn_debug
