@@ -35,9 +35,14 @@ Documents define the scope of coreference resolution. Note that sentences
 belonging to a document must be grouped together and ordered in the input
 files.
 
-Preprocessing of the input corpora consists of tokenisation (using _Spacy_),
-coreference resolution (using _AllenNLP_) and conversion into the data structures
-required by _OpenNMT_. It is done as follows:
+On the _source side_, preprocessing of the input corpora consists of tokenisation
+(using _Spacy_), coreference resolution (using _AllenNLP_) and conversion into
+the data structures required by _OpenNMT_. The _target side_ text undergoes
+standard _OpenNMT_ preprocessing. **Note: As a consequence, the _target side_ of
+the corpus must be supplied in tokenised form, but the _source side_ must be
+untokenised and will be tokenised during preprocessing.**
+
+Preprocessing is done as follows:
 
 ```
 python OpenNMT-py/preprocess.py \
