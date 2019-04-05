@@ -221,7 +221,8 @@ class DocumentBuilder:
             self.dataset_reader = allennlp.data.DatasetReader.by_name('coref')(max_span_width)
             self.coref_model = None
         else:
-            cuda_device = 0 if torch.cuda.is_available() else -1
+            # cuda_device = 0 if torch.cuda.is_available() else -1
+            cuda_device = -1
             logger.info('Loading coref model from %s (cuda_device=%d).' % (coref_path, cuda_device))
             coref_model = allennlp.models.load_archive(coref_path, cuda_device=cuda_device)
 
