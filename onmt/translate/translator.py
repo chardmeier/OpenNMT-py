@@ -184,9 +184,10 @@ class Translator(object):
                 "log_probs": []}
 
         if run_coref:
+            cuda_device = 0 if torch.cuda.is_available() else -1
             if self.logger is not None:
-                self.logger.info('Loading coref model from %s.' % run_coref)
-            self.coref_model = allennlp.models.load_archive(run_coref)
+                self.logger.info('Loading coref model from %s (cuda_device=%d).' % (run_coref, cuda_device))
+            self.coref_model = allennlp.models.load_archive(run_coref, cuda_device=cuda_device)
         else:
             self.coref_model = None
 
