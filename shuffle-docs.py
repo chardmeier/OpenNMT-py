@@ -21,9 +21,9 @@ def main():
     with open(src_out, 'w') as f_src, open(tgt_out, 'w') as f_tgt, open(docids_out, 'w') as f_docids:
         for lines in docs:
             for s, t, d in lines:
-                print(s, file=f_src, end='')
-                print(t, file=f_tgt, end='')
-                print(d, file=f_docids, end='')
+                f_src.write(s)
+                f_tgt.write(t)
+                f_docids.write(d)
 
 
 if __name__ == '__main__':
