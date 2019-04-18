@@ -102,7 +102,7 @@ class CorefField(torchtext.data.RawField):
                 l_mask.append(snt_mask)
                 l_mention_pos_in_chain.append(snt_mention_pos_in_chain)
 
-        max_chain_length = max(emb.shape[0] for emb in l_span_embeddings)
+        max_chain_length = max((emb.shape[0] for emb in l_span_embeddings), default=0)
         chain_map = torch.tensor(l_chain_map, device=device, dtype=torch.long)
         chain_start = torch.tensor(l_chain_start, device=device, dtype=torch.long)
         mention_pos_in_chain = torch.stack(l_mention_pos_in_chain, 0)
