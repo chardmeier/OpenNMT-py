@@ -102,19 +102,23 @@ class CorefField(torchtext.data.RawField):
                 l_mask.append(snt_mask)
                 l_mention_pos_in_chain.append(snt_mention_pos_in_chain)
 
-        max_chain_length = max((emb.shape[0] for emb in l_span_embeddings), default=0)
-        chain_map = torch.tensor(l_chain_map, device=device, dtype=torch.long)
-        chain_start = torch.tensor(l_chain_start, device=device, dtype=torch.long)
-        mention_pos_in_chain = torch.stack(l_mention_pos_in_chain, 0)
-        span_embeddings = torch.zeros(total_chains, max_chain_length, self.span_emb_size, device=device)
-        attention_mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
+        if total_chains == 0:
+            coref_context = None
+        else:
+            max_chain_length = max(emb.shape[0] for emb in l_span_embeddings)
+            chain_map = torch.tensor(l_chain_map, device=device, dtype=torch.long)
+            chain_start = torch.tensor(l_chain_start, device=device, dtype=torch.long)
+            mention_pos_in_chain = torch.stack(l_mention_pos_in_chain, 0)
+            span_embeddings = torch.zeros(total_chains, max_chain_length, self.span_emb_size, device=device)
+            attention_mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
 
-        for i, (emb, snt_mask) in enumerate(zip(l_span_embeddings, l_mask)):
-            span_embeddings[i, :emb.shape[0], :] = emb
-            attention_mask[i, snt_mask, :emb.shape[0]] = 1
+            for i, (emb, snt_mask) in enumerate(zip(l_span_embeddings, l_mask)):
+                span_embeddings[i, :emb.shape[0], :] = emb
+                attention_mask[i, snt_mask, :emb.shape[0]] = 1
 
-        coref_context = CorefContext(chain_map, chain_start, span_embeddings,
-                                     attention_mask, mention_pos_in_chain)
+            coref_context = CorefContext(chain_map, chain_start, span_embeddings,
+                                         attention_mask, mention_pos_in_chain)
+
         # The unsqueeze is because we pretend to be a single-factor multi-field
         out_batch = src_batch.unsqueeze(-1), coref_context
 
