@@ -22,9 +22,9 @@ def main():
     with open(src_out, 'w') as f_src, open(tgt_out, 'w') as f_tgt, open(docids_out, 'w') as f_docids:
         for lines in docs:
             for s, t, d in lines:
-                f_src.write(s)
-                f_tgt.write(t)
-                f_docids.write(d)
+                print(s.rstrip('\n'), file=f_src)
+                print(t.rstrip('\n'), file=f_tgt)
+                print(d.rstrip('\n'), file=f_docids)
 
 
 if __name__ == '__main__':
