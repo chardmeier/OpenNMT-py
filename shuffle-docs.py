@@ -12,7 +12,8 @@ def main():
 
     print('Loading documents...', file=sys.stderr)
     with open(src, 'r') as f_src, open(tgt, 'r') as f_tgt, open(docids, 'r') as f_docids:
-        docs = [list(lines) for docid, lines in itertools.groupby(zip(f_src, f_tgt, f_docids), lambda e: e[2])]
+        docs = [list(lines) for docid, lines in itertools.groupby(zip(f_src, f_tgt, f_docids),
+                                                                  lambda e: e[2].split('\t')[0])]
 
     print('Shuffling...', file=sys.stderr)
     random.shuffle(docs)
