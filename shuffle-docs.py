@@ -3,6 +3,11 @@ import random
 import sys
 
 
+def get_docid(tpl):
+    docid = tpl[2].rstrip('\n').split('\t')[0]
+    return docid
+
+
 def main():
     if len(sys.argv) != 7:
         print('Usage: %s src tgt docids src_out tgt_out docids_out' % sys.argv[0], file=sys.stderr)
@@ -12,8 +17,7 @@ def main():
 
     print('Loading documents...', file=sys.stderr)
     with open(src, 'r') as f_src, open(tgt, 'r') as f_tgt, open(docids, 'r') as f_docids:
-        docs = [list(lines) for docid, lines in itertools.groupby(zip(f_src, f_tgt, f_docids),
-                                                                  lambda e: e[2].split('\t')[0])]
+        docs = [list(lines) for docid, lines in itertools.groupby(zip(f_src, f_tgt, f_docids), key=get_docid)]
 
     print('Shuffling...', file=sys.stderr)
     random.shuffle(docs)
