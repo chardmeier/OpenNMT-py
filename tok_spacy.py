@@ -9,6 +9,9 @@ def main():
 
     model = sys.argv[1]
     nlp = spacy.load(model)
+    nlp.remove_pipe('tagger')
+    nlp.remove_pipe('parser')
+    nlp.remove_pipe('ner')
 
     for line in sys.stdin:
         snt = nlp(line.rstrip('\n'))
