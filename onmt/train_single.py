@@ -6,6 +6,7 @@ import torch
 
 from onmt.inputters.inputter import build_dataset_iter, \
     load_old_vocab, old_style_vocab
+from onmt.inputters.coref_dataset import CorefField
 from onmt.model_builder import build_model
 from onmt.utils.optimizers import Optimizer
 from onmt.utils.misc import set_random_seed
@@ -62,9 +63,12 @@ def main(opt, device_id):
 
         checkpoint['model'] = {k.replace('encoder.transformer.5', 'encoder.context_layer'): v
                                for k, v in checkpoint['model'].items()}
-        logger.info('Loading vocab from checkpoint at %s.' % opt.train_from)
-        vocab = checkpoint['vocab']
         model_opt = opt
+        vocab = checkpoint['vocab']
+        src_multifield = vocab['src']
+        vocab['src'] = CorefField(max_mentions_before=opt.max_mentions_before,
+                                  max_mentions_after=opt.max_mentions_after)
+        vocab['src'].src_field = src_multifield.fields[0][1]
     else:
         checkpoint = None
         model_opt = opt
