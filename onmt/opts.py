@@ -378,6 +378,8 @@ def train_opts(parser):
     group.add('--reset_optim', '-reset_optim', default='none',
               choices=['none', 'all', 'states', 'keep_states'],
               help="Optimization resetter when train_from.")
+    group.add('--coref_pretrain', '-coref_pretrain', default='', type=str,
+              help="Load checkpoint from baseline model as pretraining for coref-enabled model.")
 
     # Pretrained word vectors
     group.add('--pre_word_vecs_enc', '-pre_word_vecs_enc',

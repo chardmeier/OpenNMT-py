@@ -55,6 +55,16 @@ def main(opt, device_id):
         ArgumentParser.validate_model_opts(model_opt)
         logger.info('Loading vocab from checkpoint at %s.' % opt.train_from)
         vocab = checkpoint['vocab']
+    elif opt.coref_pretrain:
+        logger.info('Loading pretrained baseline weights from %s.' % opt.coref_pretrain)
+        checkpoint = torch.load(opt.coref_pretrain,
+                                map_location=lambda storage, loc: storage)
+
+        checkpoint['model'] = {k.replace('encoder.transformer.5', 'encoder.context_layer'): v
+                               for k, v in checkpoint['model'].items()}
+        logger.info('Loading vocab from checkpoint at %s.' % opt.train_from)
+        vocab = checkpoint['vocab']
+        model_opt = opt
     else:
         checkpoint = None
         model_opt = opt
