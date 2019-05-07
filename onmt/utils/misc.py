@@ -30,7 +30,7 @@ def make_shards(src_path, tgt_path, shard_size, docid_path=None):
             finish_doc = None
             for l_src, l_tgt, l_docid in zip(f_src, f_tgt, f_docid):
                 if docid_path is not None:
-                    docid_prefix = (l_docid.rstrip('\n') + '\t').encode('utf-8')
+                    docid_prefix = (l_docid.rstrip('\n').split('\t')[0] + '\t').encode('utf-8')
 
                 if finish_doc is not None:
                     if docid_prefix == finish_doc:
