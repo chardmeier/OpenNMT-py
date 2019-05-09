@@ -110,11 +110,11 @@ class CorefField(torchtext.data.RawField):
             chain_start = torch.tensor(l_chain_start, device=device, dtype=torch.long)
             mention_pos_in_chain = torch.stack(l_mention_pos_in_chain, 0)
             span_embeddings = torch.zeros(total_chains, max_chain_length, self.span_emb_size, device=device)
-            attention_mask = torch.zeros(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
+            attention_mask = torch.ones(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
 
             for i, (emb, snt_mask) in enumerate(zip(l_span_embeddings, l_mask)):
                 span_embeddings[i, :emb.shape[0], :] = emb
-                attention_mask[i, snt_mask, emb.shape[0]:] = 1
+                attention_mask[i, snt_mask, :emb.shape[0]] = 1
 
             coref_context = CorefContext(chain_map, chain_start, span_embeddings,
                                          attention_mask, mention_pos_in_chain)
