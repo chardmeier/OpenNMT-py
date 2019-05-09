@@ -126,7 +126,7 @@ class CorefTransformerLayer(torch.nn.Module):
             emb_transformed = self.positional_embeddings('chain', emb_transformed, coref_context.chain_start)
             # Attention to vectors in coref chain
             ctx_out, _ = self.context_attn(emb_transformed, emb_transformed, context_query,
-                                           mask=coref_context.attention_mask)
+                                           mask=coref_context.attention_mask, type='coref')
             # Reduce output so we get one row per example again
             ctx_context = _aggregate_chains(input_norm.shape[0], ctx_out,
                                             coref_context.chain_map, coref_context.attention_mask)

@@ -201,6 +201,11 @@ class MultiHeadedAttention(nn.Module):
 
         # 3) Apply attention dropout and compute context vectors.
         attn = self.softmax(scores).to(query.dtype)
+        if mask is not None and type == "coref":
+            # The calculations above can result in nonzero attentions for ineligible positions
+            # if no coref chain occurs in the sentence.
+            attn = attn.masked_fill(mask, 0)
+
         drop_attn = self.dropout(attn)
 
         context_original = torch.matmul(drop_attn, value)
