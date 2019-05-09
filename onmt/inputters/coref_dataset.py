@@ -114,7 +114,7 @@ class CorefField(torchtext.data.RawField):
 
             for i, (emb, snt_mask) in enumerate(zip(l_span_embeddings, l_mask)):
                 span_embeddings[i, :emb.shape[0], :] = emb
-                attention_mask[i, snt_mask, :emb.shape[0]] = 1
+                attention_mask[i, snt_mask, emb.shape[0]:] = 1
 
             coref_context = CorefContext(chain_map, chain_start, span_embeddings,
                                          attention_mask, mention_pos_in_chain)
@@ -139,6 +139,7 @@ class CorefContext:
         self.span_embeddings = span_embeddings
         # A [nchains x sentence_length x max_chain_length] byte tensor indicating the positions eligible for
         # attention (i.e., words belonging to a mention and the actual chain length)
+        # Note: It's ZERO for eligible positions, one for those that can't receive attention.
         self.attention_mask = attention_mask
         # A [nchains x sentence_length] long tensor indicating the chain-internal position of each mention
         # in the sentence
