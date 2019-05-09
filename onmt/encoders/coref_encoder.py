@@ -90,7 +90,8 @@ class CorefTransformerLayer(torch.nn.Module):
 
         self.feed_forward = onmt.modules.position_ffn.PositionwiseFeedForward(d_model, d_ff, dropout)
         self.layer_norm = torch.nn.LayerNorm(d_model, eps=1e-6)
-        self.dropout = torch.nn.Dropout(dropout)
+        self.dropout_attn = torch.nn.Dropout(dropout)
+        self.dropout_ctx = torch.nn.Dropout(dropout)
 
     def forward(self, inputs, coref_context, mask):
         """
@@ -114,7 +115,7 @@ class CorefTransformerLayer(torch.nn.Module):
         # Now the coref-specific parts.
         if coref_context is None:
             # document has no mentions
-            gated_context = attn_context
+            gated_context = self.dropout_attn(attn_context)
         else:
             # Linearly map span embeddings from the size used by AllenNLP to our model size.
             emb_transformed = self.linear_context(coref_context.span_embeddings)
@@ -131,9 +132,9 @@ class CorefTransformerLayer(torch.nn.Module):
                                             coref_context.chain_map, coref_context.attention_mask)
 
             # Gate to choose between coref attention and self-attention
-            gated_context = self.attn_gate(attn_context, ctx_context)
+            gated_context = self.attn_gate(self.dropout_attn(attn_context), self.dropout_ctx(ctx_context))
 
-        out = self.dropout(gated_context) + inputs
+        out = gated_context + inputs
         return self.feed_forward(out)
 
 
