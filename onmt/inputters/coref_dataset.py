@@ -114,7 +114,7 @@ class CorefField(torchtext.data.RawField):
 
             for i, (emb, snt_mask) in enumerate(zip(l_span_embeddings, l_mask)):
                 span_embeddings[i, :emb.shape[0], :] = emb
-                attention_mask[i, snt_mask, :emb.shape[0]] = 1
+                attention_mask[i, snt_mask, :emb.shape[0]] = 0
 
             coref_context = CorefContext(chain_map, chain_start, span_embeddings,
                                          attention_mask, mention_pos_in_chain)
