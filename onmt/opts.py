@@ -82,6 +82,8 @@ def model_opts(parser):
                    "are experimental. Options are "
                    "[rnn|transformer|cnn].")
 
+    group.add('--coref_gate_per_word', '-coref_gate_per_word', action='store_true',
+              help='Make the coref context gate operate per word instead of per dimension of the context vector.')
     group.add('--layers', '-layers', type=int, default=-1,
               help='Number of layers in enc/dec.')
     group.add('--enc_layers', '-enc_layers', type=int, default=2,

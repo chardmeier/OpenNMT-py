@@ -88,7 +88,7 @@ class CorefField(torchtext.data.RawField):
 
             if ex[1] and len(ex[1][0]) == 2:
                 # Older datasets don't have the cluster id
-                examples = ((spans, emb, None) for spans, emb in ex[1])
+                examples = ((spans, emb, -1) for spans, emb in ex[1])
             else:
                 examples = ex[1]
 
