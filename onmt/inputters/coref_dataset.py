@@ -77,6 +77,7 @@ class CorefField(torchtext.data.RawField):
 
         l_chain_map = []
         l_chain_start = []
+        l_chain_id = []
         l_span_embeddings = []
         l_mask = []
         l_mention_pos_in_chain = []
@@ -84,7 +85,14 @@ class CorefField(torchtext.data.RawField):
         total_chains = 0
         for i, ex in enumerate(batch):
             total_chains += len(ex[1])
-            for spans, emb in ex[1]:
+
+            if ex[1] and len(ex[1][0]) == 2:
+                # Older datasets don't have the cluster id
+                examples = ((spans, emb, None) for spans, emb in ex[1])
+            else:
+                examples = ex[1]
+
+            for spans, emb, cluster_id in examples:
                 chain_length = emb.shape[0]
                 min_pos_in_cluster = min(s[1] for s in spans)
                 max_pos_in_cluster = max(s[1] for s in spans)
@@ -93,6 +101,7 @@ class CorefField(torchtext.data.RawField):
 
                 l_chain_map.append(i)
                 l_chain_start.append(min_pos_in_cluster)
+                l_chain_id.append(cluster_id)
                 l_span_embeddings.append(emb[emb_from:emb_to, :])
                 snt_mask = torch.zeros(pad_len, dtype=torch.uint8)
                 snt_mention_pos_in_chain = torch.full((pad_len,), -1, device=device, dtype=torch.long)
@@ -108,6 +117,7 @@ class CorefField(torchtext.data.RawField):
             max_chain_length = max(emb.shape[0] for emb in l_span_embeddings)
             chain_map = torch.tensor(l_chain_map, device=device, dtype=torch.long)
             chain_start = torch.tensor(l_chain_start, device=device, dtype=torch.long)
+            chain_id = torch.tensor(l_chain_id, device=device, dtype=torch.long)
             mention_pos_in_chain = torch.stack(l_mention_pos_in_chain, 0)
             span_embeddings = torch.zeros(total_chains, max_chain_length, self.span_emb_size, device=device)
             attention_mask = torch.ones(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
@@ -116,7 +126,7 @@ class CorefField(torchtext.data.RawField):
                 span_embeddings[i, :emb.shape[0], :] = emb
                 attention_mask[i, snt_mask, :emb.shape[0]] = 0
 
-            coref_context = CorefContext(chain_map, chain_start, span_embeddings,
+            coref_context = CorefContext([x[0] for x in batch], chain_id, chain_map, chain_start, span_embeddings,
                                          attention_mask, mention_pos_in_chain)
 
         # The unsqueeze is because we pretend to be a single-factor multi-field
@@ -129,7 +139,12 @@ class CorefField(torchtext.data.RawField):
 
 
 class CorefContext:
-    def __init__(self, chain_map, chain_start, span_embeddings, attention_mask, mention_pos_in_chain):
+    def __init__(self, src_text, chain_id, chain_map, chain_start, span_embeddings, attention_mask,
+                 mention_pos_in_chain):
+        # The original source text (a list of words for each sentence). Just for debugging.
+        self.src_text = src_text
+        # A [nchains] long vector with the document-wide IDs of coreference chains
+        self.chain_id = chain_id
         # A [nchains] long vector mapping chains to examples in the batch
         self.chain_map = chain_map
         # A [nchains] long vector indicating the chain-internal position of the first recorded mention
@@ -260,7 +275,7 @@ class DocumentBuilder:
                     active_clusters[cluster_id].append((tuple(pos - snt_start for pos in span), pos_in_cluster))
                 coref_list = []
                 for cluster_id, spans in active_clusters.items():
-                    coref_list.append((spans, cluster_embeddings[cluster_id]))
+                    coref_list.append((spans, cluster_embeddings[cluster_id], cluster_id))
                 coref_per_snt.append(coref_list)
                 snt_start = snt_end
         else:
