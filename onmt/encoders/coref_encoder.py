@@ -10,9 +10,10 @@ from onmt.encoders.encoder import EncoderBase
 # therefore we provide our own basic versions of them.
 
 class SimpleGate(torch.nn.Module):
-    def __init__(self, dim):
+    def __init__(self, dim, gate_per_word):
         super(SimpleGate, self).__init__()
-        self.gate = torch.nn.Linear(2 * dim, dim, bias=True)
+        gate_dim = 1 if gate_per_word else dim
+        self.gate = torch.nn.Linear(2 * dim, gate_dim, bias=True)
         self.sig = torch.nn.Sigmoid()
 
     def forward(self, in1, in2):
@@ -79,13 +80,13 @@ class CorefTransformerLayer(torch.nn.Module):
         dropout (float): dropout probability(0-1.0).
     """
 
-    def __init__(self, d_model, d_context, heads, d_ff, dropout):
+    def __init__(self, d_model, d_context, heads, d_ff, dropout, coref_gate_per_word):
         super(CorefTransformerLayer, self).__init__()
 
         self.self_attn = onmt.modules.MultiHeadedAttention(heads, d_model, dropout=dropout)
         self.linear_context = torch.nn.Linear(d_context, d_model, bias=True)
         self.context_attn = onmt.modules.MultiHeadedAttention(heads, d_model, dropout=dropout)
-        self.attn_gate = SimpleGate(d_model)
+        self.attn_gate = SimpleGate(d_model, coref_gate_per_word)
         self.positional_embeddings = CorefPositionalEncoding(d_model)
 
         self.feed_forward = onmt.modules.position_ffn.PositionwiseFeedForward(d_model, d_ff, dropout)
@@ -167,7 +168,7 @@ def _aggregate_chains(batch_size, ctx_out, chain_map, mask):
 
 
 class CorefTransformerEncoder(EncoderBase):
-    def __init__(self, num_layers, d_model, d_context, heads, d_ff, dropout, embeddings):
+    def __init__(self, num_layers, d_model, d_context, heads, d_ff, dropout, embeddings, coref_gate_per_word):
         super(CorefTransformerEncoder, self).__init__()
 
         self.num_layers = num_layers
@@ -175,7 +176,7 @@ class CorefTransformerEncoder(EncoderBase):
         self.transformer = torch.nn.ModuleList(
             [onmt.encoders.transformer.TransformerEncoderLayer(d_model, heads, d_ff, dropout)
              for _ in range(num_layers - 1)])
-        self.context_layer = CorefTransformerLayer(d_model, d_context, heads, d_ff, dropout)
+        self.context_layer = CorefTransformerLayer(d_model, d_context, heads, d_ff, dropout, coref_gate_per_word)
         self.layer_norm = torch.nn.LayerNorm(d_model, eps=1e-6)
 
     @classmethod
@@ -188,7 +189,8 @@ class CorefTransformerEncoder(EncoderBase):
             opt.heads,
             opt.transformer_ff,
             opt.dropout,
-            embeddings)
+            embeddings,
+            opt.coref_gate_per_word)
 
     def forward(self, inp, lengths=None):
         src, context = inp
