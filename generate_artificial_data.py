@@ -27,7 +27,7 @@ def main():
 
             txt = [random_pair() for _ in range(opt.tok_before)]
             txt.append(('antecedent%d' % cluster_id, 'ANTECEDENT%d' % cluster_id))
-            txt = [random_pair() for _ in range(opt.tok_after)]
+            txt += [random_pair() for _ in range(opt.tok_after)]
 
             src = ' '.join(p[0] for p in txt)
             tgt = ' '.join(p[1] for p in txt)
@@ -37,7 +37,7 @@ def main():
 
             txt = [random_pair() for _ in range(opt.tok_before)]
             txt.append(('anaphor', 'ANAPHOR%d' % cluster_id))
-            txt = [random_pair() for _ in range(opt.tok_after)]
+            txt += [random_pair() for _ in range(opt.tok_after)]
 
             src = ' '.join(p[0] for p in txt)
             tgt = ' '.join(p[1] for p in txt)
