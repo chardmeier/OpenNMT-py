@@ -9,13 +9,15 @@ from onmt.inputters.inputter import \
 from onmt.inputters.dataset_base import Dataset
 from onmt.inputters.text_dataset import text_sort_key, TextDataReader
 from onmt.inputters.coref_dataset import coref_sort_key, CorefDataReader
+from onmt.inputters.artificial_coref import ArtificialCorefDataReader
 from onmt.inputters.image_dataset import img_sort_key, ImageDataReader
 from onmt.inputters.audio_dataset import audio_sort_key, AudioDataReader
 from onmt.inputters.datareader_base import DataReaderBase
 
 
 str2reader = {
-    "text": TextDataReader, "coref": CorefDataReader, "img": ImageDataReader, "audio": AudioDataReader}
+    "text": TextDataReader, "coref": CorefDataReader, "img": ImageDataReader, "audio": AudioDataReader,
+    "artificial_coref": ArtificialCorefDataReader}
 str2sortkey = {
     'text': text_sort_key, 'coref': coref_sort_key, 'img': img_sort_key, 'audio': audio_sort_key}
 
