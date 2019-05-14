@@ -36,7 +36,7 @@ def main():
             print(docid, file=f_docids)
 
             txt = [random_pair() for _ in range(opt.tok_before)]
-            txt.append(('anaphor' % cluster_id, 'ANAPHOR%d' % cluster_id))
+            txt.append(('anaphor', 'ANAPHOR%d' % cluster_id))
             txt = [random_pair() for _ in range(opt.tok_after)]
 
             src = ' '.join(p[0] for p in txt)
