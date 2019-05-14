@@ -15,10 +15,10 @@ class ArtificialCorefDataReader(DataReaderBase):
         return cls(opt.artificial_size)
 
     def read(self, sequences, side, _dir=None):
+        cluster_id = None
+        cluster_emb = None
         for i, s in enumerate(snt.decode('utf-8').rstrip('\n').split(' ') for snt in sequences):
             coref_per_snt = []
-            cluster_id = None
-            cluster_emb = None
             for j, w in enumerate(s):
                 if w.startswith('antecedent'):
                     cluster_id = int(w[10:])
