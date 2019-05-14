@@ -31,9 +31,9 @@ def main():
 
             src = ' '.join(p[0] for p in txt)
             tgt = ' '.join(p[1] for p in txt)
-            print(src, f=f_src)
-            print(tgt, f=f_tgt)
-            print(docid, f=f_docids)
+            print(src, file=f_src)
+            print(tgt, file=f_tgt)
+            print(docid, file=f_docids)
 
             txt = [random_pair() for _ in range(opt.tok_before)]
             txt.append(('anaphor' % cluster_id, 'ANAPHOR%d' % cluster_id))
@@ -41,9 +41,9 @@ def main():
 
             src = ' '.join(p[0] for p in txt)
             tgt = ' '.join(p[1] for p in txt)
-            print(src, f=f_src)
-            print(tgt, f=f_tgt)
-            print(docid, f=f_docids)
+            print(src, file=f_src)
+            print(tgt, file=f_tgt)
+            print(docid, file=f_docids)
 
 
 if __name__ == '__main__':
