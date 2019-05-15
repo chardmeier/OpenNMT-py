@@ -116,6 +116,12 @@ def main(opt):
     logger.info(" * number of source features: %d." % src_nfeats)
     logger.info(" * number of target features: %d." % tgt_nfeats)
 
+    src_reader = inputters.str2reader[opt.data_type].from_opt(opt)
+    tgt_reader = inputters.str2reader["text"].from_opt(opt)
+
+    if opt.data_type == "artificial_coref":
+        opt.data_type = "coref"
+
     logger.info("Building `Fields` object...")
     fields = inputters.get_fields(
         opt.data_type,
@@ -124,9 +130,6 @@ def main(opt):
         dynamic_dict=opt.dynamic_dict,
         src_truncate=opt.src_seq_length_trunc,
         tgt_truncate=opt.tgt_seq_length_trunc)
-
-    src_reader = inputters.str2reader[opt.data_type].from_opt(opt)
-    tgt_reader = inputters.str2reader["text"].from_opt(opt)
 
     logger.info("Building & saving training data...")
     train_dataset_files = build_save_dataset(

@@ -4,20 +4,18 @@ from onmt.inputters.datareader_base import DataReaderBase
 
 
 class ArtificialCorefDataReader(DataReaderBase):
-    def __init__(self, size):
+    def __init__(self):
         super(ArtificialCorefDataReader, self).__init__()
-        self.size = size
-        self.tok_before = 5
-        self.tok_after = 5
 
     @classmethod
     def from_opt(cls, opt):
-        return cls(opt.artificial_size)
+        return cls()
 
     def read(self, sequences, side, _dir=None):
         cluster_id = None
         cluster_emb = None
-        for i, s in enumerate(snt.decode('utf-8').rstrip('\n').split(' ') for snt in sequences):
+        text = [snt.decode('utf-8').rstrip('\n').split('\t')[1] for snt in sequences]
+        for i, s in enumerate(snt.split(' ') for snt in text):
             coref_per_snt = []
             for j, w in enumerate(s):
                 if w.startswith('antecedent'):
