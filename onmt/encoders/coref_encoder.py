@@ -159,7 +159,7 @@ def _aggregate_chains(batch_size, ctx_out, chain_map, mask):
     minus_inf = torch.tensor([float('-inf')], device=ctx_out.device)
     for i in range(ctx_out.shape[0]):
         ex_idx = chain_map[i]
-        masked = torch.where(mask[i, :, 0].unsqueeze(1), ctx_out[i, :], minus_inf)
+        masked = torch.where(mask[i, :, 0].unsqueeze(1), minus_inf, ctx_out[i, :])
         out_list[ex_idx] = torch.max(out_list[ex_idx], masked)
 
     out = torch.stack(out_list, dim=0)
