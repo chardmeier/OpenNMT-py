@@ -224,6 +224,8 @@ class Translator(object):
 
         src_reader = inputters.str2reader[opt.data_type].from_opt(opt)
         tgt_reader = inputters.str2reader["text"].from_opt(opt)
+        if opt.data_type == "artificial_coref":
+            opt.data_type = "coref"
         return cls(
             model,
             fields,
