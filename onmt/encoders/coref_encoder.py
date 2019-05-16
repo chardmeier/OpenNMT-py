@@ -9,15 +9,16 @@ from onmt.encoders.encoder import EncoderBase
 # The standard OpenNMT implementations of gates and positional embeddings do additional things we don't want,
 # therefore we provide our own basic versions of them.
 
-class SimpleGate(torch.nn.Module):
+class MaskedGate(torch.nn.Module):
     def __init__(self, dim, gate_per_word):
         super(SimpleGate, self).__init__()
         gate_dim = 1 if gate_per_word else dim
         self.gate = torch.nn.Linear(2 * dim, gate_dim, bias=True)
         self.sig = torch.nn.Sigmoid()
 
-    def forward(self, in1, in2):
+    def forward(self, in1, in2, mask):
         z = self.sig(self.gate(torch.cat((in1, in2), dim=-1)))
+        z.masked_fill_(mask, 1.0)
         return z * in1 + (1.0 - z) * in2
 
 
@@ -86,7 +87,7 @@ class CorefTransformerLayer(torch.nn.Module):
         self.self_attn = onmt.modules.MultiHeadedAttention(heads, d_model, dropout=dropout)
         self.linear_context = torch.nn.Linear(d_context, d_model, bias=True)
         self.context_attn = onmt.modules.MultiHeadedAttention(heads, d_model, dropout=dropout)
-        self.attn_gate = SimpleGate(d_model, coref_gate_per_word)
+        self.attn_gate = MaskedGate(d_model, coref_gate_per_word)
         self.positional_embeddings = CorefPositionalEncoding(d_model)
 
         self.feed_forward = onmt.modules.position_ffn.PositionwiseFeedForward(d_model, d_ff, dropout)
@@ -129,11 +130,12 @@ class CorefTransformerLayer(torch.nn.Module):
             ctx_out, _ = self.context_attn(emb_transformed, emb_transformed, context_query,
                                            mask=coref_context.attention_mask, type='coref')
             # Reduce output so we get one row per example again
-            ctx_context = _aggregate_chains(input_norm.shape[0], ctx_out,
-                                            coref_context.chain_map, coref_context.attention_mask)
+            ctx_context, sentence_mask = _aggregate_chains(input_norm.shape[0], ctx_out,
+                                                           coref_context.chain_map, coref_context.attention_mask)
 
             # Gate to choose between coref attention and self-attention
-            gated_context = self.attn_gate(self.dropout_attn(attn_context), self.dropout_ctx(ctx_context))
+            gated_context = self.attn_gate(self.dropout_attn(attn_context), self.dropout_ctx(ctx_context),
+                                           sentence_mask)
 
         out = gated_context + inputs
         return self.feed_forward(out)
@@ -154,17 +156,20 @@ def _aggregate_chains(batch_size, ctx_out, chain_map, mask):
            entries of ctx_out can be attended to.
            `[total_chains x sentence_length x max_chain_length]`
     :return: Per-sentence context attention matrix `[batch_size x sentence_length x span_embedding_size]`
+           and a mask indicating by 0 the words in each sentence that are part of a coreference chain
     """
+    sentence_mask = torch.ones(batch_size, ctx_out.shape[1], dtype=torch.uint8)
     out_list = [torch.full(ctx_out.shape[1:], float('-inf'), device=ctx_out.device)] * batch_size
     minus_inf = torch.tensor([float('-inf')], device=ctx_out.device)
     for i in range(ctx_out.shape[0]):
         ex_idx = chain_map[i]
+        sentence_mask[ex_idx, :] = sentence_mask[ex_idx, :] * mask[i, :, 0]
         masked = torch.where(mask[i, :, 0].unsqueeze(1), minus_inf, ctx_out[i, :])
         out_list[ex_idx] = torch.max(out_list[ex_idx], masked)
 
     out = torch.stack(out_list, dim=0)
     # In the next line, torch.eq(...) is a workaround for the lack of torch.isinf in my version of torch
-    return torch.where(torch.eq(out + 1, out), torch.zeros(1, device=ctx_out.device), out)
+    return torch.where(torch.eq(out + 1, out), torch.zeros(1, device=ctx_out.device), out), sentence_mask
 
 
 class CorefTransformerEncoder(EncoderBase):
