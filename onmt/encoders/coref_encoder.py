@@ -11,7 +11,7 @@ from onmt.encoders.encoder import EncoderBase
 
 class MaskedGate(torch.nn.Module):
     def __init__(self, dim, gate_per_word):
-        super(SimpleGate, self).__init__()
+        super(MaskedGate, self).__init__()
         gate_dim = 1 if gate_per_word else dim
         self.gate = torch.nn.Linear(2 * dim, gate_dim, bias=True)
         self.sig = torch.nn.Sigmoid()
