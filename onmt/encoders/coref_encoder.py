@@ -17,8 +17,7 @@ class MaskedGate(torch.nn.Module):
         self.sig = torch.nn.Sigmoid()
 
     def forward(self, in1, in2, mask):
-        z = self.sig(self.gate(torch.cat((in1, in2), dim=-1)))
-        z.masked_fill_(mask.unsqueeze(-1), 1.0)
+        z = self.sig(self.gate(torch.cat((in1, in2), dim=-1))).masked_fill(mask.unsqueeze(-1), 1.0)
         return z * in1 + (1.0 - z) * in2
 
 
