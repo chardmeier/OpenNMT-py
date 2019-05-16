@@ -158,7 +158,7 @@ def _aggregate_chains(batch_size, ctx_out, chain_map, mask):
     :return: Per-sentence context attention matrix `[batch_size x sentence_length x span_embedding_size]`
            and a mask indicating by 0 the words in each sentence that are part of a coreference chain
     """
-    sentence_mask = torch.ones(batch_size, ctx_out.shape[1], dtype=torch.uint8)
+    sentence_mask = torch.ones(batch_size, ctx_out.shape[1], dtype=torch.uint8, device=ctx_out.device)
     out_list = [torch.full(ctx_out.shape[1:], float('-inf'), device=ctx_out.device)] * batch_size
     minus_inf = torch.tensor([float('-inf')], device=ctx_out.device)
     for i in range(ctx_out.shape[0]):
