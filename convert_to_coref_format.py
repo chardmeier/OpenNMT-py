@@ -12,7 +12,7 @@ def main():
 
     examples = torch.load(infile)
     for ex in examples:
-        ex.src = (ex.src, None)
+        ex.src = (ex.src[0], None)
 
     torch.save(examples, outfile)
 
