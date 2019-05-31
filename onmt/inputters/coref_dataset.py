@@ -84,11 +84,13 @@ class CorefField(torchtext.data.RawField):
 
         total_chains = 0
         for i, ex in enumerate(batch):
-            total_chains += len(ex[1])
+            total_chains += len(ex[1]) if ex[1] else 0
 
             if ex[1] and len(ex[1][0]) == 2:
                 # Older datasets don't have the cluster id
                 examples = ((spans, emb, -1) for spans, emb in ex[1])
+            elif ex[1] is None:
+                examples = []
             else:
                 examples = ex[1]
 
