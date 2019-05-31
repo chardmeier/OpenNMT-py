@@ -15,7 +15,7 @@ def main():
 
     blvoc = voc['src']
     crvoc = onmt.inputters.coref_dataset.CorefField(base_name='src')
-    crvoc.vocab = blvoc
+    crvoc.vocab = blvoc.base_field.vocab
     voc['src'] = crvoc
 
     torch.save(voc, outfile)
