@@ -1,3 +1,4 @@
+import onmt.inputters.text_dataset
 import sys
 import torch
 
@@ -14,6 +15,7 @@ def main():
     for ex in examples:
         ex.src = [ex.src[0]]
 
+    examples.sort_key = onmt.inputters.text_dataset.text_sort_key
     torch.save(examples, outfile)
 
 
