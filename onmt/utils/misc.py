@@ -7,6 +7,15 @@ import random
 import inspect
 
 
+# from https://stackoverflow.com/a/32954700
+def zip_equal(*iterables):
+    sentinel = object()
+    for combo in itertools.zip_longest(*iterables, fillvalue=sentinel):
+        if sentinel in combo:
+            raise ValueError('Iterables have different lengths')
+        yield combo
+
+
 def make_shards(src_path, tgt_path, shard_size, docid_path=None):
     with contextlib.ExitStack() as stack:
         f_src = stack.enter_context(open(src_path, 'rb'))
@@ -22,13 +31,13 @@ def make_shards(src_path, tgt_path, shard_size, docid_path=None):
             f_docid = itertools.repeat(None)
 
         if shard_size <= 0:
-            yield zip(f_src.readlines(), f_tgt.readlines())
+            yield zip_equal(f_src.readlines(), f_tgt.readlines())
         else:
             src_shard = []
             tgt_shard = []
             docid_prefix = ''
             finish_doc = None
-            for l_src, l_tgt, l_docid in zip(f_src, f_tgt, f_docid):
+            for l_src, l_tgt, l_docid in zip_equal(f_src, f_tgt, f_docid):
                 if docid_path is not None:
                     docid_prefix = (l_docid.rstrip('\n').split('\t')[0] + '\t').encode('utf-8')
 
