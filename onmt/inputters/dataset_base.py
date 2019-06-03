@@ -118,6 +118,9 @@ class Dataset(TorchtextDataset):
         self.src_vocabs = []
         examples = []
         for ex_dict in starmap(_join_dicts, zip(*read_iters)):
+            if fields['src'] is None:
+                # coref code uses this to signal the sentence pair should be discarded
+                continue
             if can_copy:
                 src_field = fields['src']
                 tgt_field = fields['tgt']

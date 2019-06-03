@@ -231,6 +231,8 @@ class CorefDataReader(DataReaderBase):
                 # AllenNLP sometimes fails on weird data (e.g., single-sentence docs without any mentions)
                 logger.error('Document creation failed. Skipping document.')
                 traceback.print_exc()
+                for _ in tok_src:
+                    yield None
                 continue
 
             for i, s in enumerate(tok_src):
