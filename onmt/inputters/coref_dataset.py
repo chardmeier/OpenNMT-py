@@ -232,7 +232,7 @@ class CorefDataReader(DataReaderBase):
                 logger.error('Document creation failed. Skipping document.')
                 traceback.print_exc()
                 for _ in tok_src:
-                    yield None
+                    yield {'discard': True}
                 continue
 
             for i, s in enumerate(tok_src):
