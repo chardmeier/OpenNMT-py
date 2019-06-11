@@ -35,7 +35,7 @@ def make_shards(src_path, tgt_path, shard_size, docid_path=None):
         else:
             src_shard = []
             tgt_shard = []
-            docid_prefix = ''
+            docid_prefix = b''
             finish_doc = None
             for l_src, l_tgt, l_docid in zip_equal(f_src, f_tgt, f_docid):
                 if docid_path is not None:
