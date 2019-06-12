@@ -179,7 +179,7 @@ class CorefDataReader(DataReaderBase):
         logger.info('Loading Spacy model for %s' % tgt_lang)
         spacy_tgt = spacy.load(tgt_lang, disable=['parser', 'tagger', 'ner'])
         self.spacy = {'src': spacy_src, 'tgt': spacy_tgt}
-        self.doc_builder = DocumentBuilder(run_coref)
+        self.doc_builder = DocumentBuilder.create(run_coref)
 
     @classmethod
     def from_opt(cls, opt):
@@ -256,6 +256,13 @@ class DocumentBuilder:
             self.coref_model = coref_model.model
             self.coref_model.eval()
 
+    @classmethod
+    def create(cls, config_str):
+        if config_str.startswith('RANDOM:'):
+            return RandomDocumentBuilder(config_str)
+        else:
+            return cls(config_str)
+
     def make_document(self, docid, tok_src):
         instance = self.dataset_reader.text_to_instance(tok_src)
         if self.coref_model is not None:
@@ -286,6 +293,50 @@ class DocumentBuilder:
             coref_per_snt = None
 
         return Document(docid, instance, coref_per_snt)
+
+
+class RandomDocumentBuilder:
+    def __init__(self, config_string):
+        options = config_string.split(':')
+        # first entry is RANDOM
+        odict = {}
+        for o in options[1:]:
+            name, val = o.split('=')
+            odict[name] = val
+
+        self.lambda_nmentions = float(odict.get('lambda_nmentions', 0.001))
+        self.lambda_chain_length = float(odict.get('lambda_chain_length', 0.001))
+        self.lambda_mention_length = float(odict.get('lambda_mention_length', 0.001))
+        self.embedding_size = int(odict.get('embedding_size'), 1220)
+
+        self.embeddings_dist = torch.load(odict['embedding_dist'])
+
+    def make_document(self, docid, tok_src):
+        coref_per_snt = []
+        for snt in tok_src:
+            n = self._draw_number_of_mentions(len(snt))
+            coref_list = []
+            for i in range(n):
+                emb = self._draw_embedding_matrix()
+                span = self._draw_mention_span(len(snt))
+                coref_list.append(([span], emb, i))
+            coref_per_snt.append(coref_list)
+        return Document(docid, None, coref_per_snt)
+
+    def _draw_number_of_mentions(self, sentence_length):
+        ment_per_word = torch.empty(1).exponential_(self.lambda_nmentions)
+        return torch.round(sentence_length * ment_per_word).item()
+
+    def _draw_embedding_matrix(self):
+        chain_length = 2 + torch.empty(1).geometric_(self.lambda_chain_length).item()
+        sample = torch.randint(len(self.embedding_dist), (chain_length, self.embedding_size))
+        return self.embedding_dist[sample]
+
+    def _draw_mention_span(self, sentence_length):
+        mention_start = torch.randint(sentence_length, (1,)).item()
+        mention_length = min(torch.empty(1).geometric_(self.lambda_mention_length), sentence_length - mention_start)
+        mention_end = mention_start + mention_length - 1
+        return mention_start, mention_end
 
 
 class Document:
