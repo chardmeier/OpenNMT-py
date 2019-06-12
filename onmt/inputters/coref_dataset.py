@@ -309,7 +309,7 @@ class RandomDocumentBuilder:
         self.lambda_mention_length = float(odict.get('lambda_mention_length', 0.8))
         self.embedding_size = int(odict.get('embedding_size', 1220))
 
-        self.embeddings_dist = torch.load(odict['embedding_dist'])
+        self.embedding_dist = torch.load(odict['embedding_dist'])
 
     def make_document(self, docid, tok_src):
         coref_per_snt = []
