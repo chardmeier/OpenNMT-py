@@ -328,7 +328,7 @@ class RandomDocumentBuilder:
         return int(torch.round(sentence_length * ment_per_word).item())
 
     def _draw_embedding_matrix(self):
-        chain_length = 2 + torch.empty(1).geometric_(self.lambda_chain_length).item()
+        chain_length = 2 + int(torch.empty(1).geometric_(self.lambda_chain_length).item())
         sample = torch.randint(len(self.embedding_dist), (chain_length, self.embedding_size))
         return self.embedding_dist[sample]
 
