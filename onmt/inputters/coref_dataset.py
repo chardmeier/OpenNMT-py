@@ -306,7 +306,7 @@ class RandomDocumentBuilder:
 
         self.lambda_nmentions = float(odict.get('lambda_nmentions', 0.8))
         self.lambda_chain_length = float(odict.get('lambda_chain_length', 0.8))
-        self.lambda_mention_length = float(odict.get('lambda_mention_length', 0.8))
+        self.lambda_mention_length = float(odict.get('lambda_mention_length', 0.9))
         self.embedding_size = int(odict.get('embedding_size', 1220))
 
         self.embedding_dist = torch.load(odict['embedding_dist'])
