@@ -325,7 +325,7 @@ class RandomDocumentBuilder:
 
     def _draw_number_of_mentions(self, sentence_length):
         ment_per_word = torch.empty(1).exponential_(self.lambda_nmentions)
-        return torch.round(sentence_length * ment_per_word).item()
+        return int(torch.round(sentence_length * ment_per_word).item())
 
     def _draw_embedding_matrix(self):
         chain_length = 2 + torch.empty(1).geometric_(self.lambda_chain_length).item()
@@ -333,8 +333,9 @@ class RandomDocumentBuilder:
         return self.embedding_dist[sample]
 
     def _draw_mention_span(self, sentence_length):
-        mention_start = torch.randint(sentence_length, (1,)).item()
-        mention_length = min(torch.empty(1).geometric_(self.lambda_mention_length), sentence_length - mention_start)
+        mention_start = int(torch.randint(sentence_length, (1,)).item())
+        mention_length = min(int(torch.empty(1).geometric_(self.lambda_mention_length)),
+                             sentence_length - mention_start)
         mention_end = mention_start + mention_length - 1
         return mention_start, mention_end
 
