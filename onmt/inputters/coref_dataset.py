@@ -260,6 +260,8 @@ class DocumentBuilder:
     def create(cls, config_str):
         if config_str.startswith('RANDOM:'):
             return RandomDocumentBuilder(config_str)
+        elif config_str.startswith('NO_COREF'):
+            return NoCorefDocumentBuilder()
         else:
             return cls(config_str)
 
@@ -343,6 +345,11 @@ class RandomDocumentBuilder:
 
     def _draw_pos_in_chain(self):
         return int(torch.empty(1).geometric_(self.lambda_pos_in_chain).item())
+
+
+class NoCorefDocumentBuilder:
+    def make_document(self, docid, tok_src):
+        return Document(docid, None, [[] for _ in tok_src])
 
 
 class Document:
