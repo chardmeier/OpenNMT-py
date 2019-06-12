@@ -307,6 +307,7 @@ class RandomDocumentBuilder:
         self.lambda_nmentions = float(odict.get('lambda_nmentions', 0.8))
         self.lambda_chain_length = float(odict.get('lambda_chain_length', 0.8))
         self.lambda_mention_length = float(odict.get('lambda_mention_length', 0.9))
+        self.lambda_pos_in_chain = float(odict.get('lambda_pos_in_chain', 0.6))
         self.embedding_size = int(odict.get('embedding_size', 1220))
 
         self.embedding_dist = torch.load(odict['embedding_dist'])
@@ -319,7 +320,8 @@ class RandomDocumentBuilder:
             for i in range(n):
                 emb = self._draw_embedding_matrix()
                 span = self._draw_mention_span(len(snt))
-                coref_list.append(([span], emb, i))
+                pos_in_chain = self._draw_pos_in_chain()
+                coref_list.append(([(span, pos_in_chain)], emb, i))
             coref_per_snt.append(coref_list)
         return Document(docid, None, coref_per_snt)
 
@@ -338,6 +340,9 @@ class RandomDocumentBuilder:
                              sentence_length - mention_start)
         mention_end = mention_start + mention_length - 1
         return mention_start, mention_end
+
+    def _draw_pos_in_chain(self):
+        return int(torch.empty(1).geometric_(self.lambda_pos_in_chain).item())
 
 
 class Document:
