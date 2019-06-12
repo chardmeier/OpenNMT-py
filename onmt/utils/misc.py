@@ -12,8 +12,10 @@ import inspect
 def zip_equal(*iterables):
     sentinel = object()
     for combo in itertools.zip_longest(*iterables, fillvalue=sentinel):
-        if sentinel in combo and set(combo) - {sentinel, None}:
-            raise ValueError('Iterables have different lengths')
+        if sentinel in combo:
+            if set(combo) - {sentinel, None}:
+                raise ValueError('Iterables have different lengths')
+            return
         yield combo
 
 
