@@ -8,10 +8,11 @@ import inspect
 
 
 # from https://stackoverflow.com/a/32954700
+# changed to accept None values since we use itertools.repeat(None) to replace iterables we don't need
 def zip_equal(*iterables):
     sentinel = object()
     for combo in itertools.zip_longest(*iterables, fillvalue=sentinel):
-        if sentinel in combo:
+        if sentinel in combo and set(combo) - {sentinel, None}:
             raise ValueError('Iterables have different lengths')
         yield combo
 
