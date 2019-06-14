@@ -18,7 +18,7 @@ class MaskedGate(torch.nn.Module):
 
     def forward(self, in1, in2, mask):
         z = self.sig(self.gate(torch.cat((in1, in2), dim=-1))).masked_fill(mask.unsqueeze(-1), 1.0)
-        return z * in1 + (1.0 - z) * in2
+        return z * in1 + (1.0 - z) * in2, z
 
 
 # mostly copied from onmt.modules.embeddings.PositionalEncoding
@@ -94,6 +94,9 @@ class CorefTransformerLayer(torch.nn.Module):
         self.dropout_attn = torch.nn.Dropout(dropout)
         self.dropout_ctx = torch.nn.Dropout(dropout)
 
+        self.log_name = 'attention_log.%02d.pt'
+        self.log_counter = 0
+
     def forward(self, inputs, coref_context, mask):
         """
         Coref Transformer Encoder Layer definition.
@@ -133,11 +136,17 @@ class CorefTransformerLayer(torch.nn.Module):
                                                            coref_context.chain_map, coref_context.attention_mask)
 
             # Gate to choose between coref attention and self-attention
-            gated_context = self.attn_gate(self.dropout_attn(attn_context), self.dropout_ctx(ctx_context),
-                                           sentence_mask)
+            gated_context, gate_vals = self.attn_gate(self.dropout_attn(attn_context), self.dropout_ctx(ctx_context),
+                                                      sentence_mask)
+
+            self.log_attention(coref_context.src_text, gate_vals)
 
         out = gated_context + inputs
         return self.feed_forward(out)
+
+    def log_attention(self, src_text, gate_vals):
+        torch.save((src_text, gate_vals), self.log_name % self.log_counter)
+        self.log_counter += 1
 
 
 def _aggregate_chains(batch_size, ctx_out, chain_map, mask):
