@@ -114,7 +114,7 @@ class CorefTransformerLayer(torch.nn.Module):
 
         # first compute standard self-attention
         input_norm = self.layer_norm(inputs)
-        attn_context, _ = self.self_attn(input_norm, input_norm, input_norm, mask=mask)
+        attn_context, top_attn_mt = self.self_attn(input_norm, input_norm, input_norm, mask=mask)
 
         # Now the coref-specific parts.
         if coref_context is None:
@@ -129,7 +129,7 @@ class CorefTransformerLayer(torch.nn.Module):
             context_query = self.positional_embeddings('query', context_query, coref_context.mention_pos_in_chain)
             emb_transformed = self.positional_embeddings('chain', emb_transformed, coref_context.chain_start)
             # Attention to vectors in coref chain
-            ctx_out, _ = self.context_attn(emb_transformed, emb_transformed, context_query,
+            ctx_out, top_attn_ctx = self.context_attn(emb_transformed, emb_transformed, context_query,
                                            mask=coref_context.attention_mask, type='coref')
             # Reduce output so we get one row per example again
             ctx_context, sentence_mask = _aggregate_chains(input_norm.shape[0], ctx_out,
@@ -139,13 +139,13 @@ class CorefTransformerLayer(torch.nn.Module):
             gated_context, gate_vals = self.attn_gate(self.dropout_attn(attn_context), self.dropout_ctx(ctx_context),
                                                       sentence_mask)
 
-            self.log_attention(coref_context.src_text, gate_vals)
+            self.log_attention(coref_context.src_text, gate_vals, top_attn_mt, top_attn_ctx)
 
         out = gated_context + inputs
         return self.feed_forward(out)
 
-    def log_attention(self, src_text, gate_vals):
-        torch.save((src_text, gate_vals), self.log_name % self.log_counter)
+    def log_attention(self, src_text, gate_vals, top_attn_mt, top_attn_ctx):
+        torch.save((src_text, gate_vals, top_attn_mt, top_attn_ctx), self.log_name % self.log_counter)
         self.log_counter += 1
 
 
