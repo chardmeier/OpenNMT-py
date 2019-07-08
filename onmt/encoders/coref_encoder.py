@@ -114,7 +114,7 @@ class CorefTransformerLayer(torch.nn.Module):
 
         # first compute standard self-attention
         input_norm = self.layer_norm(inputs)
-        attn_context, top_attn_mt = self.self_attn(input_norm, input_norm, input_norm, mask=mask)
+        attn_context, top_attn_mt = self.self_attn(input_norm, input_norm, input_norm, mask=mask, return_all_heads=True)
 
         # Now the coref-specific parts.
         if coref_context is None:
@@ -130,7 +130,8 @@ class CorefTransformerLayer(torch.nn.Module):
             emb_transformed = self.positional_embeddings('chain', emb_transformed, coref_context.chain_start)
             # Attention to vectors in coref chain
             ctx_out, top_attn_ctx = self.context_attn(emb_transformed, emb_transformed, context_query,
-                                           mask=coref_context.attention_mask, type='coref')
+                                                      mask=coref_context.attention_mask, type='coref',
+                                                      return_all_heads=True)
             # Reduce output so we get one row per example again
             ctx_context, sentence_mask = _aggregate_chains(input_norm.shape[0], ctx_out,
                                                            coref_context.chain_map, coref_context.attention_mask)

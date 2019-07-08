@@ -75,7 +75,7 @@ class MultiHeadedAttention(nn.Module):
                 vocab_size, self.dim_per_head)
 
     def forward(self, key, value, query, mask=None,
-                layer_cache=None, type=None):
+                layer_cache=None, type=None, return_all_heads=False):
         """
         Compute the context vector and the attention vectors.
 
@@ -226,9 +226,15 @@ class MultiHeadedAttention(nn.Module):
         # aeq(d, d_)
 
         # Return attn
-        attn = attn \
-            .view(batch_size, head_count,
-                  query_len, key_len) \
-            .contiguous()
+        if return_all_heads:
+            attn = attn \
+                .view(batch_size, head_count,
+                      query_len, key_len) \
+                .contiguous()
+        else:
+            attn = attn \
+                .view(batch_size, head_count,
+                      query_len, key_len)[:, 0, :, :] \
+                .contiguous()
 
         return output, attn
