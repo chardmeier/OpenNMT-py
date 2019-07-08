@@ -225,10 +225,10 @@ class MultiHeadedAttention(nn.Module):
         # aeq(batch, batch_)
         # aeq(d, d_)
 
-        # Return one attn
-        top_attn = attn \
+        # Return attn
+        attn = attn \
             .view(batch_size, head_count,
-                  query_len, key_len)[:, 0, :, :] \
+                  query_len, key_len) \
             .contiguous()
 
-        return output, top_attn
+        return output, attn
