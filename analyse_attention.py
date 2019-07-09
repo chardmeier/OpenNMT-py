@@ -9,9 +9,10 @@ def main():
     logfile = sys.argv[1]
     sntno = int(sys.argv[2])
 
-    src_text, gate_vals, attn_mt, attn_coref, chain_map = torch.load(logfile, map_location='cpu')
+    src_text, context_docs, gate_vals, attn_mt, attn_coref, chain_map = torch.load(logfile, map_location='cpu')
 
     s_src = src_text[sntno]
+    s_context_doc = context_docs[sntno]
     s_gate = gate_vals[sntno]
     s_attn_mt = attn_mt[sntno]
     s_attn_ctx = attn_coref[chain_map == sntno]
