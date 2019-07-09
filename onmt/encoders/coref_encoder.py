@@ -140,13 +140,15 @@ class CorefTransformerLayer(torch.nn.Module):
             gated_context, gate_vals = self.attn_gate(self.dropout_attn(attn_context), self.dropout_ctx(ctx_context),
                                                       sentence_mask)
 
-            self.log_attention(coref_context.src_text, gate_vals, top_attn_mt, top_attn_ctx, coref_context.chain_map)
+            self.log_attention(coref_context.src_text, coref_context.context_docs,
+                               gate_vals, top_attn_mt, top_attn_ctx, coref_context.chain_map)
 
         out = gated_context + inputs
         return self.feed_forward(out)
 
-    def log_attention(self, src_text, gate_vals, top_attn_mt, top_attn_ctx, chain_map):
-        torch.save((src_text, gate_vals, top_attn_mt, top_attn_ctx, chain_map), self.log_name % self.log_counter)
+    def log_attention(self, src_text, context_docs, gate_vals, top_attn_mt, top_attn_ctx, chain_map):
+        torch.save((src_text, context_docs, gate_vals, top_attn_mt, top_attn_ctx, chain_map),
+                   self.log_name % self.log_counter)
         self.log_counter += 1
 
 

@@ -52,8 +52,7 @@ class CorefField(torchtext.data.RawField):
         self.src_field.vocab = value
 
     def preprocess(self, example):
-        src, coref = example
-        return self.src_field.preprocess(src), coref
+        return (self.src_field.preprocess(example[0]),) + example[1:]
 
     def process(self, batch, device=-1):
         """
@@ -81,6 +80,7 @@ class CorefField(torchtext.data.RawField):
         l_span_embeddings = []
         l_mask = []
         l_mention_pos_in_chain = []
+        l_context_doc = []
 
         total_chains = 0
         for i, ex in enumerate(batch):
@@ -113,6 +113,8 @@ class CorefField(torchtext.data.RawField):
                 l_mask.append(snt_mask)
                 l_mention_pos_in_chain.append(snt_mention_pos_in_chain)
 
+                l_context_doc.append(ex[2])
+
         if total_chains == 0:
             coref_context = None
         else:
@@ -128,8 +130,8 @@ class CorefField(torchtext.data.RawField):
                 span_embeddings[i, :emb.shape[0], :] = emb
                 attention_mask[i, snt_mask, :emb.shape[0]] = 0
 
-            coref_context = CorefContext([x[0] for x in batch], chain_id, chain_map, chain_start, span_embeddings,
-                                         attention_mask, mention_pos_in_chain)
+            coref_context = CorefContext([x[0] for x in batch], l_context_doc, chain_id, chain_map, chain_start,
+                                         span_embeddings, attention_mask, mention_pos_in_chain)
 
         # The unsqueeze is because we pretend to be a single-factor multi-field
         out_batch = src_batch.unsqueeze(-1), coref_context
@@ -141,10 +143,12 @@ class CorefField(torchtext.data.RawField):
 
 
 class CorefContext:
-    def __init__(self, src_text, chain_id, chain_map, chain_start, span_embeddings, attention_mask,
+    def __init__(self, src_text, context_doc, chain_id, chain_map, chain_start, span_embeddings, attention_mask,
                  mention_pos_in_chain):
         # The original source text (a list of words for each sentence). Just for debugging.
         self.src_text = src_text
+        # The document from which the examples are taken
+        self.context_docs = context_doc
         # A [nchains] long vector with the document-wide IDs of coreference chains
         self.chain_id = chain_id
         # A [nchains] long vector mapping chains to examples in the batch
@@ -236,7 +240,7 @@ class CorefDataReader(DataReaderBase):
                 continue
 
             for i, s in enumerate(tok_src):
-                yield {'src': (s, doc.coref_per_snt[i]), 'indices': i}
+                yield {'src': (s, doc.coref_per_snt[i], doc), 'indices': i}
 
 
 class DocumentBuilder:
@@ -294,7 +298,7 @@ class DocumentBuilder:
         else:
             coref_per_snt = None
 
-        return Document(docid, instance, coref_per_snt)
+        return Document(docid, instance, coref_pred, coref_per_snt)
 
 
 class RandomDocumentBuilder:
@@ -325,7 +329,7 @@ class RandomDocumentBuilder:
                 pos_in_chain = self._draw_pos_in_chain()
                 coref_list.append(([(span, pos_in_chain)], emb, i))
             coref_per_snt.append(coref_list)
-        return Document(docid, None, coref_per_snt)
+        return Document(docid, None, None, coref_per_snt)
 
     def _draw_number_of_mentions(self, sentence_length):
         ment_per_word = torch.empty(1).exponential_(self.lambda_nmentions)
@@ -349,13 +353,14 @@ class RandomDocumentBuilder:
 
 class NoCorefDocumentBuilder:
     def make_document(self, docid, tok_src):
-        return Document(docid, None, [[] for _ in tok_src])
+        return Document(docid, None, None, [[] for _ in tok_src])
 
 
 class Document:
-    def __init__(self, docid, instance, coref_per_snt):
+    def __init__(self, docid, instance, coref_pred, coref_per_snt):
         self.docid = docid
         self.instance = instance
+        self.coref_pred = coref_pred
         self.coref_per_snt = coref_per_snt
 
 
