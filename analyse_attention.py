@@ -3,7 +3,7 @@ import sys
 import torch
 
 
-Cluster = collections.namedtuple('Cluster', ['cluster_id', 'spans', 'mentions', 'gate', 'attention'])
+Cluster = collections.namedtuple('Cluster', ['cluster_id', 'local_spans', 'spans', 'mentions', 'gate', 'attention'])
 
 
 def main():
@@ -32,12 +32,24 @@ def main():
     clusters = []
     for i, c in enumerate(s_cluster_ids):
         spans = s_context_doc.coref_pred['clusters'][c]
+        local_spans = s_context_doc.coref_per_snt[sntno][i][0]
         mentions = [s_context_doc.coref_pred['document'][a:b + 1] for a, b in spans]
         attn = s_attn_ctx[i, :, :sntlen, :len(spans)]
-        clusters.append(Cluster(i, spans, mentions, s_gate, attn))
+        clusters.append(Cluster(i, local_spans, spans, mentions, s_gate, attn))
 
     for c in clusters:
-        print(c)
+        print('Cluster %d' % c.cluster_id)
+        for h in range(c.attention.shape[0]):
+            print('Attention head %d' % h)
+            print(' ' * 52, end='')
+            for (a, b), pos in c.local_spans:
+                print('   %10s' % str(s_src[a:b + 1]), end='')
+            print()
+            for i, (s, m) in enumerate(zip(c.spans, c.mentions)):
+                print('%10s  %40s' % (str(s), str(m)), end='')
+                for (a, b), pos in c.local_spans:
+                    print('   %10s' % str(c.attention[0, a:b + 1, i].tolist()))
+            print()
 
     return
 
