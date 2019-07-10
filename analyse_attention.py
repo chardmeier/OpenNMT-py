@@ -3,7 +3,7 @@ import sys
 import torch
 
 
-Cluster = collections.namedtuple('Cluster', ['cluster_id', 'spans', 'gate', 'attention'])
+Cluster = collections.namedtuple('Cluster', ['cluster_id', 'spans', 'mentions', 'gate', 'attention'])
 
 
 def main():
@@ -32,8 +32,9 @@ def main():
     clusters = []
     for i, c in enumerate(s_cluster_ids):
         spans = s_context_doc.coref_pred['clusters'][c]
+        mentions = [s_context_doc.coref_pred['document'][a:b + 1] for a, b in spans]
         attn = s_attn_ctx[i, :, :sntlen, :len(spans)]
-        clusters.append(Cluster(i, spans, s_gate, attn))
+        clusters.append(Cluster(i, spans, mentions, s_gate, attn))
 
     for c in clusters:
         print(c)
