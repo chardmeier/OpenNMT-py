@@ -48,6 +48,7 @@ def main():
                     print('%10s  %40s' % (str(s), str(m)), end='')
                     for (a, b), pos in c.local_spans:
                         print('   %10s' % str(c.attention[h, a:b + 1, i].tolist()), end='')
+                    print()
                 print()
 
     return
