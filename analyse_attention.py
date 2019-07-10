@@ -23,7 +23,7 @@ def main():
         s_attn_ctx = attn_coref[chain_map == sntno]
         s_cluster_ids = chain_id[chain_map == sntno]
 
-        print('Sentence %d' % sntno)
+        print('\n\nSentence %d' % sntno)
         print('%d words' % len(s_src))
         print('%d active chains' % s_attn_ctx.shape[0])
         print(s_src)
