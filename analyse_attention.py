@@ -48,7 +48,7 @@ def main():
             for i, (s, m) in enumerate(zip(c.spans, c.mentions)):
                 print('%10s  %40s' % (str(s), str(m)), end='')
                 for (a, b), pos in c.local_spans:
-                    print('   %10s' % str(c.attention[0, a:b + 1, i].tolist()))
+                    print('   %10s' % str(c.attention[h, a:b + 1, i].tolist()))
             print()
 
     return
