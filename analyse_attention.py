@@ -42,6 +42,10 @@ def main():
                 print('Attention head %d' % h)
                 print(' ' * 52, end='')
                 for (a, b), pos in c.local_spans:
+                    print('   %10s' % str(s_gate[a:b + 1].mean(dim=-1).tolist()), end='')
+                print()
+                print(' ' * 52, end='')
+                for (a, b), pos in c.local_spans:
                     print('   %10s' % str(s_src[a:b + 1]), end='')
                 print()
                 for i, (s, m) in enumerate(zip(c.spans, c.mentions)):
