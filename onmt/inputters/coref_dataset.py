@@ -177,17 +177,18 @@ def coref_sort_key(ex):
 
 
 class CorefDataReader(DataReaderBase):
-    def __init__(self, src_lang, tgt_lang, run_coref):
+    def __init__(self, src_lang, tgt_lang, doc_builder):
         logger.info('Loading Spacy model for %s' % src_lang)
         spacy_src = spacy.load(src_lang, disable=['parser', 'tagger', 'ner'])
         logger.info('Loading Spacy model for %s' % tgt_lang)
         spacy_tgt = spacy.load(tgt_lang, disable=['parser', 'tagger', 'ner'])
         self.spacy = {'src': spacy_src, 'tgt': spacy_tgt}
-        self.doc_builder = DocumentBuilder.create(run_coref)
+        self.doc_builder = doc_builder
 
     @classmethod
     def from_opt(cls, opt):
-        return cls(opt.src_lang, opt.tgt_lang, opt.run_coref)
+        doc_builder = DocumentBuilder.from_opt(opt)
+        return cls(opt.src_lang, opt.tgt_lang, doc_builder)
 
     def read(self, sequences, side, _dir=None):
         """Read coref data from disk.
@@ -244,7 +245,7 @@ class CorefDataReader(DataReaderBase):
 
 
 class DocumentBuilder:
-    def __init__(self, coref_path, max_span_width=10):
+    def __init__(self, coref_path, discard_12person, max_span_width=10):
         if coref_path is None:
             self.dataset_reader = allennlp.data.DatasetReader.by_name('coref')(max_span_width)
             self.coref_model = None
@@ -260,14 +261,21 @@ class DocumentBuilder:
             self.coref_model = coref_model.model
             self.coref_model.eval()
 
+            if discard_12person:
+                self.discard_pronouns = {'I', 'me', 'my', 'myself',
+                                         'you', 'your', 'yourself', 'yourselves',
+                                         'we', 'us', 'our', 'ourselves'}
+            else:
+                self.discard_pronouns = {}
+
     @classmethod
-    def create(cls, config_str):
-        if config_str.startswith('RANDOM:'):
-            return RandomDocumentBuilder(config_str)
-        elif config_str.startswith('NO_COREF'):
+    def from_opt(cls, opt):
+        if opt.run_coref.startswith('RANDOM:'):
+            return RandomDocumentBuilder(opt.run_coref)
+        elif opt.run_coref.startswith('NO_COREF'):
             return NoCorefDocumentBuilder()
         else:
-            return cls(config_str)
+            return cls(opt.run_coref, opt.discard_12person)
 
     def make_document(self, docid, tok_src):
         instance = self.dataset_reader.text_to_instance(tok_src)
@@ -281,6 +289,17 @@ class DocumentBuilder:
                                   for cl in clusters]
             spans_in_cluster = list(sorted(s for c in clusters for s in c))
             span_to_cluster = {s: (i, j) for i, c in enumerate(clusters) for j, s in enumerate(c)}
+
+            discard_clusters = set()
+            if self.discard_pronouns:
+                for i, cluster in enumerate(clusters):
+                    n12 = 0
+                    for a, b in cluster:
+                        if a == b and coref_pred['document'][a] in self.discard_pronouns:
+                            n12 += 1
+                    if n12 > .6 * len(cluster):
+                        discard_clusters.add(i)
+
             snt_start = 0
             coref_per_snt = []
             for snt in tok_src:
@@ -292,7 +311,8 @@ class DocumentBuilder:
                     active_clusters[cluster_id].append((tuple(pos - snt_start for pos in span), pos_in_cluster))
                 coref_list = []
                 for cluster_id, spans in active_clusters.items():
-                    coref_list.append((spans, cluster_embeddings[cluster_id], cluster_id))
+                    if cluster_id not in discard_clusters:
+                        coref_list.append((spans, cluster_embeddings[cluster_id], cluster_id))
                 coref_per_snt.append(coref_list)
                 snt_start = snt_end
         else:

@@ -154,6 +154,8 @@ def model_opts(parser):
                    "https://arxiv.org/pdf/1803.02155.pdf")
     group.add('--heads', '-heads', type=int, default=8,
               help='Number of heads for transformer self-attention')
+    group.add('--coref_heads', '-coref_heads', type=int, default=8,
+              help='Number of heads for transformer context attention')
     group.add('--transformer_ff', '-transformer_ff', type=int, default=2048,
               help='Size of hidden transformer feed-forward')
 
@@ -302,6 +304,8 @@ def preprocess_opts(parser):
     # Options most relevant to coref
     group.add('--run_coref', '-run_coref',
               help='Run coreference resolver during preprocessing. Takes model as parameter.')
+    group.add('--discard_12person', '-discard_12person', action='store_true',
+              help='Discard chains that predominantly consist of first and second person pronouns.')
 
     # Options most relevant to speech
     group = parser.add_argument_group('Speech')
@@ -558,6 +562,8 @@ def translate_opts(parser):
     group.add('--tgt_lang', '-tgt_lang', default='fr', help='Target language.')
     group.add('--run_coref', '-run_coref',
               help='Run coreference resolver during preprocessing. Takes model as parameter.')
+    group.add('--discard_12person', '-discard_12person', action='store_true',
+              help='Discard chains that predominantly consist of first and second person pronouns.')
     group.add('--fp32', '-fp32', action='store_true',
               help="Force the model to be in FP32 "
                    "because FP16 is very slow on GTX1080(ti).")
