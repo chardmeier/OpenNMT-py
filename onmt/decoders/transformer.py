@@ -83,7 +83,7 @@ class TransformerDecoderLayer(nn.Module):
         mid, attn = self.context_attn(memory_bank, memory_bank, query_norm,
                                       mask=src_pad_mask,
                                       layer_cache=layer_cache,
-                                      type="context")
+                                      type="context", return_all_heads=True)
         output = self.feed_forward(self.drop(mid) + query)
 
         return output, attn
@@ -202,6 +202,7 @@ class TransformerDecoder(DecoderBase):
         src_pad_mask = src_words.data.eq(pad_idx).unsqueeze(1)  # [B, 1, T_src]
         tgt_pad_mask = tgt_words.data.eq(pad_idx).unsqueeze(1)  # [B, 1, T_tgt]
 
+        attentions = []
         for i, layer in enumerate(self.transformer_layers):
             layer_cache = self.state["cache"]["layer_{}".format(i)] \
                 if step is not None else None
@@ -212,12 +213,14 @@ class TransformerDecoder(DecoderBase):
                 tgt_pad_mask,
                 layer_cache=layer_cache,
                 step=step)
+            attentions.append(attn)
 
         output = self.layer_norm(output)
         dec_outs = output.transpose(0, 1).contiguous()
-        attn = attn.transpose(0, 1).contiguous()
+        attn = attn[:, 0, :, :].transpose(0, 1).contiguous()
+        all_attentions = torch.cat(attentions, dim=1)
 
-        attns = {"std": attn}
+        attns = {"std": attn, "all": all_attentions}
         if self._copy:
             attns["copy"] = attn
 
