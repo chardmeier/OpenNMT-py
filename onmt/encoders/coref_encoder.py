@@ -80,12 +80,12 @@ class CorefTransformerLayer(torch.nn.Module):
         dropout (float): dropout probability(0-1.0).
     """
 
-    def __init__(self, d_model, d_context, heads, d_ff, dropout, coref_gate_per_word):
+    def __init__(self, d_model, d_context, mt_heads, coref_heads, d_ff, dropout, coref_gate_per_word):
         super(CorefTransformerLayer, self).__init__()
 
-        self.self_attn = onmt.modules.MultiHeadedAttention(heads, d_model, dropout=dropout)
+        self.self_attn = onmt.modules.MultiHeadedAttention(mt_heads, d_model, dropout=dropout)
         self.linear_context = torch.nn.Linear(d_context, d_model, bias=True)
-        self.context_attn = onmt.modules.MultiHeadedAttention(heads, d_model, dropout=dropout)
+        self.context_attn = onmt.modules.MultiHeadedAttention(coref_heads, d_model, dropout=dropout)
         self.attn_gate = MaskedGate(d_model, coref_gate_per_word)
         self.positional_embeddings = CorefPositionalEncoding(d_model)
 
@@ -172,7 +172,8 @@ def _aggregate_chains(batch_size, ctx_out, chain_map, mask):
 
 
 class CorefTransformerEncoder(EncoderBase):
-    def __init__(self, num_layers, d_model, d_context, heads, d_ff, dropout, embeddings, coref_gate_per_word):
+    def __init__(self, num_layers, d_model, d_context, heads, coref_heads, d_ff,
+                 dropout, embeddings, coref_gate_per_word):
         super(CorefTransformerEncoder, self).__init__()
 
         self.num_layers = num_layers
@@ -180,7 +181,8 @@ class CorefTransformerEncoder(EncoderBase):
         self.transformer = torch.nn.ModuleList(
             [onmt.encoders.transformer.TransformerEncoderLayer(d_model, heads, d_ff, dropout)
              for _ in range(num_layers - 1)])
-        self.context_layer = CorefTransformerLayer(d_model, d_context, heads, d_ff, dropout, coref_gate_per_word)
+        self.context_layer = CorefTransformerLayer(d_model, d_context, heads, coref_heads, d_ff,
+                                                   dropout, coref_gate_per_word)
         self.layer_norm = torch.nn.LayerNorm(d_model, eps=1e-6)
 
     @classmethod
@@ -191,6 +193,7 @@ class CorefTransformerEncoder(EncoderBase):
             opt.enc_rnn_size,
             CorefField.span_emb_size,
             opt.heads,
+            opt.coref_heads,
             opt.transformer_ff,
             opt.dropout,
             embeddings,

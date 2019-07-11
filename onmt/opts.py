@@ -154,6 +154,8 @@ def model_opts(parser):
                    "https://arxiv.org/pdf/1803.02155.pdf")
     group.add('--heads', '-heads', type=int, default=8,
               help='Number of heads for transformer self-attention')
+    group.add('--coref_heads', '-coref_heads', type=int, default=8,
+              help='Number of heads for transformer context attention')
     group.add('--transformer_ff', '-transformer_ff', type=int, default=2048,
               help='Size of hidden transformer feed-forward')
 
