@@ -304,6 +304,8 @@ def preprocess_opts(parser):
     # Options most relevant to coref
     group.add('--run_coref', '-run_coref',
               help='Run coreference resolver during preprocessing. Takes model as parameter.')
+    group.add('--discard_12person', '-discard_12person', action='store_true',
+              help='Discard chains that predominantly consist of first and second person pronouns.')
 
     # Options most relevant to speech
     group = parser.add_argument_group('Speech')
@@ -560,6 +562,8 @@ def translate_opts(parser):
     group.add('--tgt_lang', '-tgt_lang', default='fr', help='Target language.')
     group.add('--run_coref', '-run_coref',
               help='Run coreference resolver during preprocessing. Takes model as parameter.')
+    group.add('--discard_12person', '-discard_12person', action='store_true',
+              help='Discard chains that predominantly consist of first and second person pronouns.')
     group.add('--fp32', '-fp32', action='store_true',
               help="Force the model to be in FP32 "
                    "because FP16 is very slow on GTX1080(ti).")
