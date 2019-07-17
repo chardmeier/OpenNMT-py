@@ -101,7 +101,7 @@ class RandomSampling(DecodeStrategy):
         self.original_batch_idx = torch.arange(self.batch_size,
                                                dtype=torch.long, device=device)
 
-    def advance(self, log_probs, attn):
+    def advance(self, log_probs, attn, all_attn):
         """Select next tokens randomly from the top k possible next tokens.
 
         Args:
@@ -125,8 +125,10 @@ class RandomSampling(DecodeStrategy):
         if self.return_attention:
             if self.alive_attn is None:
                 self.alive_attn = attn
+                self.alive_all_attn = all_attn
             else:
                 self.alive_attn = torch.cat([self.alive_attn, attn], 0)
+                self.alive_all_attn = torch.cat([self.alive_all_attn, all_attn], 0)
         self.ensure_max_length()
 
     def update_finished(self):

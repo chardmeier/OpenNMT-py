@@ -218,7 +218,7 @@ class TransformerDecoder(DecoderBase):
         output = self.layer_norm(output)
         dec_outs = output.transpose(0, 1).contiguous()
         attn = attn[:, 0, :, :].transpose(0, 1).contiguous()
-        all_attentions = torch.cat(attentions, dim=1)
+        all_attentions = torch.cat(attentions, dim=1).permute(2, 0, 3, 1).contiguous()
 
         attns = {"std": attn, "all": all_attentions}
         if self._copy:

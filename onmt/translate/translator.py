@@ -92,7 +92,6 @@ class Translator(object):
             fields,
             src_reader,
             tgt_reader,
-            run_coref=None,
             gpu=-1,
             n_best=1,
             min_length=0,
@@ -220,7 +219,6 @@ class Translator(object):
             fields,
             src_reader,
             tgt_reader,
-            run_coref=opt.run_coref,
             gpu=opt.gpu,
             n_best=opt.n_best,
             min_length=opt.min_length,
@@ -270,7 +268,8 @@ class Translator(object):
             tgt_path=None,
             src_dir=None,
             batch_size=None,
-            attn_debug=False):
+            attn_debug=False,
+            all_attn_file=None):
         """Translate content of ``src`` and get gold scores from ``tgt``.
 
         Args:
@@ -324,12 +323,13 @@ class Translator(object):
 
         all_scores = []
         all_predictions = []
+        all_attentions = []
 
         start_time = time.time()
 
         for batch in data_iter:
             batch_data = self.translate_batch(
-                batch, data.src_vocabs, attn_debug
+                batch, data.src_vocabs, attn_debug or all_attn_file is not None
             )
             translations = xlation_builder.from_batch(batch_data)
 
@@ -376,7 +376,13 @@ class Translator(object):
                         row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
                     os.write(1, output.encode('utf-8'))
 
+                if all_attn_file:
+                    all_attentions.append(trans.attns[0])
         end_time = time.time()
+
+        if all_attn_file:
+            all_attns = torch.stack(all_attentions, dim=0)
+            torch.save(all_attns, all_attn_file)
 
         if self.report_score:
             msg = self._report_score('PRED', pred_score_total,
@@ -460,7 +466,7 @@ class Translator(object):
             # Shape: (1, B, 1)
             decoder_input = random_sampler.alive_seq[:, -1].view(1, -1, 1)
 
-            log_probs, attn = self._decode_and_generate(
+            log_probs, attn, all_attn = self._decode_and_generate(
                 decoder_input,
                 memory_bank,
                 batch,
@@ -471,7 +477,7 @@ class Translator(object):
                 batch_offset=random_sampler.select_indices
             )
 
-            random_sampler.advance(log_probs, attn)
+            random_sampler.advance(log_probs, attn, all_attn)
             any_batch_is_finished = random_sampler.is_finished.any()
             if any_batch_is_finished:
                 random_sampler.update_finished()
@@ -562,6 +568,8 @@ class Translator(object):
             decoder_in, memory_bank, memory_lengths=memory_lengths, step=step
         )
 
+        all_attn = dec_attn.get('all')
+
         # Generator forward.
         if not self.copy_attn:
             if "std" in dec_attn:
@@ -593,7 +601,7 @@ class Translator(object):
             log_probs = scores.squeeze(0).log()
             # returns [(batch_size x beam_size) , vocab ] when 1 step
             # or [ tgt_len, batch_size, vocab ] when full sentence
-        return log_probs, attn
+        return log_probs, attn, all_attn
 
     def _translate_batch(
             self,
@@ -662,7 +670,7 @@ class Translator(object):
         for step in range(max_length):
             decoder_input = beam.current_predictions.view(1, -1, 1)
 
-            log_probs, attn = self._decode_and_generate(
+            log_probs, attn, all_attn = self._decode_and_generate(
                 decoder_input,
                 memory_bank,
                 batch,
@@ -672,7 +680,7 @@ class Translator(object):
                 step=step,
                 batch_offset=beam._batch_offset)
 
-            beam.advance(log_probs, attn)
+            beam.advance(log_probs, attn, all_attn)
             any_beam_is_finished = beam.is_finished.any()
             if any_beam_is_finished:
                 beam.update_finished()
@@ -700,6 +708,7 @@ class Translator(object):
         results["scores"] = beam.scores
         results["predictions"] = beam.predictions
         results["attention"] = beam.attention
+        results["all_attention"] = beam.all_attention
         return results
 
     # This is left in the code for now, but unsued
@@ -762,7 +771,7 @@ class Translator(object):
             inp = inp.view(1, -1, 1)
 
             # (b) Decode and forward
-            out, beam_attn = self._decode_and_generate(
+            out, beam_attn, all_attn = self._decode_and_generate(
                 inp, memory_bank, batch, src_vocabs,
                 memory_lengths=memory_lengths, src_map=src_map, step=i
             )
@@ -802,7 +811,7 @@ class Translator(object):
         tgt = batch.tgt
         tgt_in = tgt[:-1]
 
-        log_probs, attn = self._decode_and_generate(
+        log_probs, attn, all_attn = self._decode_and_generate(
             tgt_in, memory_bank, batch, src_vocabs,
             memory_lengths=src_lengths, src_map=src_map)
 
