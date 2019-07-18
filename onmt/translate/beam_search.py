@@ -291,5 +291,5 @@ class BeamSearch(DecodeStrategy):
                         0, non_finished)
         if self.alive_all_attn is not None:
             inp_seq_len = self.alive_all_attn.size(-2)
-            self.alive_attn = attention.index_select(1, non_finished) \
+            self.alive_all_attn = all_attention.index_select(1, non_finished) \
                 .view(step - 1, _B_new * self.beam_size, inp_seq_len, -1)

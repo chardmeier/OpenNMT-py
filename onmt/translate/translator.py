@@ -377,12 +377,11 @@ class Translator(object):
                     os.write(1, output.encode('utf-8'))
 
                 if all_attn_file:
-                    all_attentions.append(trans.attns[0])
+                    all_attentions.append(trans.all_attns[0])
         end_time = time.time()
 
         if all_attn_file:
-            all_attns = torch.stack(all_attentions, dim=0)
-            torch.save(all_attns, all_attn_file)
+            torch.save(all_attentions, all_attn_file)
 
         if self.report_score:
             msg = self._report_score('PRED', pred_score_total,
