@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 """ Translator Class and builder """
 from __future__ import print_function
-import allennlp.models
 import argparse
 import codecs
-import contextlib
+import gc
 import os
 import math
 import time
@@ -464,13 +463,15 @@ class Translator(object):
         all_attentions = []
 
         for batch in data_iter:
-            attn = self._get_forced_attentions_for_batch(batch, data.src_vocabs)
+            attn = self._get_forced_attentions_for_batch(batch, data.src_vocabs).detach()
             idx, perm = torch.sort(batch.indices)
             for sntno, i in zip(idx, perm):
                 example = data.examples[sntno]
                 srclen = len(example.src[0])
                 tgtlen = len(example.tgt[0])
-                all_attentions.append(attn[:tgtlen, i, :srclen, :].detach().to(device='cpu'))
+                all_attentions.append(attn[:tgtlen, i, :srclen, :].to(device='cpu'))
+            del attn
+            gc.collect()
 
         return all_attentions
 
