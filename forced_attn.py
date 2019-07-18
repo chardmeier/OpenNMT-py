@@ -26,8 +26,7 @@ def main(opt):
             src=src_shard,
             tgt=tgt_shard,
             src_dir=opt.src_dir,
-            batch_size=opt.batch_size,
-            all_attn_file=opt.all_attn_file
+            batch_size=opt.batch_size
         )
         torch.save(attns, opt.all_attn_file + '.%02d' % i)
 
