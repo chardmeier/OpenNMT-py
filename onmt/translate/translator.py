@@ -253,7 +253,7 @@ class Translator(object):
     def _gold_score(self, batch, memory_bank, src_lengths, src_vocabs,
                     use_src_map, enc_states, batch_size, src):
         if "tgt" in batch.__dict__:
-            gs = self._score_target(
+            gs, all_attn = self._score_target(
                 batch, memory_bank, src_lengths, src_vocabs,
                 batch.src_map if use_src_map else None)
             self.model.decoder.init_state(src, memory_bank, enc_states)
@@ -413,6 +413,61 @@ class Translator(object):
             json.dump(self.translator.beam_accum,
                       codecs.open(self.dump_beam, 'w', 'utf-8'))
         return all_scores, all_predictions
+
+    def get_forced_attentions(
+            self,
+            src,
+            tgt,
+            src_dir=None,
+            batch_size=None,
+            all_attn_file=None):
+        """Get attentions from forced decoding of ``src`` into ``tgt``.
+
+        Args:
+            src: See :func:`self.src_reader.read()`.
+            tgt: See :func:`self.tgt_reader.read()`.
+            tgt_path: Path of file containing reference translation (for BLEU and ROUGE scoring).
+            src_dir: See :func:`self.src_reader.read()` (only relevant
+                for certain types of data).
+            batch_size (int): size of examples per mini-batch
+            attn_debug (bool): enables the attention logging
+
+        Returns:
+            (`list`, `list`)
+
+            * all_scores is a list of `batch_size` lists of `n_best` scores
+            * all_predictions is a list of `batch_size` lists
+                of `n_best` predictions
+        """
+
+        if batch_size is None:
+            raise ValueError("batch_size must be set")
+
+        data = inputters.Dataset(
+            self.fields,
+            readers=[self.src_reader, self.tgt_reader],
+            data=[("src", src), ("tgt", tgt)],
+            dirs=[src_dir, None],
+            sort_key=inputters.str2sortkey[self.data_type],
+            filter_pred=self._filter_pred
+        )
+
+        data_iter = inputters.OrderedIterator(
+            dataset=data,
+            device=self._dev,
+            batch_size=batch_size,
+            train=False,
+            sort=False,
+            sort_within_batch=True,
+            shuffle=False
+        )
+
+        all_attentions = []
+
+        for batch in data_iter:
+            all_attentions.append(self._get_forced_attentions_for_batch(batch, data.src_vocabs))
+
+        return all_attentions
 
     def _translate_random_sampling(
             self,
@@ -601,6 +656,21 @@ class Translator(object):
             # returns [(batch_size x beam_size) , vocab ] when 1 step
             # or [ tgt_len, batch_size, vocab ] when full sentence
         return log_probs, attn, all_attn
+
+    def _get_forced_attentions_for_batch(self, batch, src_vocabs):
+        # (0) Prep the components of the search.
+        use_src_map = self.copy_attn
+        batch_size = batch.batch_size
+
+        # (1) Run the encoder on the src.
+        src, enc_states, memory_bank, src_lengths = self._run_encoder(batch)
+        self.model.decoder.init_state(src, memory_bank, enc_states)
+
+        gs, all_attn = self._score_target(
+            batch, memory_bank, src_lengths, src_vocabs,
+            batch.src_map if use_src_map else None)
+
+        return all_attn
 
     def _translate_batch(
             self,
@@ -820,7 +890,7 @@ class Translator(object):
         gold_scores = log_probs.gather(2, gold)
         gold_scores = gold_scores.sum(dim=0).view(-1)
 
-        return gold_scores
+        return gold_scores, all_attn
 
     def _report_score(self, name, score_total, words_total):
         if words_total == 0:
