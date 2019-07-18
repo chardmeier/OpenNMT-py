@@ -470,7 +470,7 @@ class Translator(object):
                 example = data.examples[sntno]
                 srclen = len(example.src[0])
                 tgtlen = len(example.tgt[0])
-                all_attentions.append(attn[:tgtlen, i, :srclen, :].detach())
+                all_attentions.append(attn[:tgtlen, i, :srclen, :].detach().to(device='cpu'))
 
         return all_attentions
 
