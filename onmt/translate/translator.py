@@ -627,6 +627,7 @@ class Translator(object):
             "predictions": None,
             "scores": None,
             "attention": None,
+            "all_attention": None,
             "batch": batch,
             "gold_score": self._gold_score(
                 batch, memory_bank, src_lengths, src_vocabs, use_src_map,
