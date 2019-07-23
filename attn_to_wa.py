@@ -31,9 +31,16 @@ def alignment_matrices(srcf, tgtf, aligf):
         yield matrix
 
 
+def lazy_load_attention(fnames):
+    for fn in fnames:
+        attn = torch.load(fn)
+        yield from iter(attn)
+        del attn
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-attn', required=True, help='NMT attentions')
+    parser.add_argument('-attn', action='append', required=True, help='NMT attentions')
     parser.add_argument('-src', required=True, help='Tokenised source corpus')
     parser.add_argument('-tgt', required=True, help='Tokenised target corpus')
     parser.add_argument('-alig', required=True, help='Word alignments')
@@ -45,8 +52,6 @@ def main():
     parser.add_argument('-momentum', type=float, default=.9, help='Momentum')
     args = parser.parse_args()
 
-    attn = torch.load(args.attn)
-
     a2wa = AttentionToWordAlignment(args.nlayers, args.nheads)
     optim = torch.optim.SGD(a2wa.parameters(), lr=args.lr, momentum=args.momentum)
     criterion = torch.nn.BCEWithLogitsLoss()
@@ -54,7 +59,8 @@ def main():
     with open(args.src, 'r') as srcf, open(args.tgt, 'r') as tgtf, open(args.alig, 'r') as aligf:
         for epoch in range(args.epochs):
             running_loss = 0
-            for attn_mat, alig_mat in zip(attn, alignment_matrices(srcf, tgtf, aligf)):
+            count = 0
+            for attn_mat, alig_mat in zip(lazy_load_attention(attn), alignment_matrices(srcf, tgtf, aligf)):
                 optim.zero_grad()
                 pred = a2wa(attn_mat)
                 loss = criterion(pred, alig_mat)
@@ -62,8 +68,9 @@ def main():
                 optim.step()
 
                 running_loss += loss.item()
+                count += 1
 
-            print('Epoch %d: Loss = %g' % (epoch, running_loss / len(attn)), file=sys.stderr)
+            print('Epoch %d: Loss = %g' % (epoch, running_loss / count), file=sys.stderr)
 
     torch.save(a2wa.state_dict(), args.save_model)
 
