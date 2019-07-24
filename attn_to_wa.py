@@ -60,7 +60,7 @@ def main():
         for epoch in range(args.epochs):
             running_loss = 0
             count = 0
-            for attn_mat, alig_mat in zip(lazy_load_attention(attn), alignment_matrices(srcf, tgtf, aligf)):
+            for attn_mat, alig_mat in zip(lazy_load_attention(args.attn), alignment_matrices(srcf, tgtf, aligf)):
                 optim.zero_grad()
                 pred = a2wa(attn_mat)
                 loss = criterion(pred, alig_mat)
