@@ -11,3 +11,7 @@ def main():
 
             tgt = [w.encode('unicode_escape') for w in x.tgt]
             print(b' '.join(tgt).encode('ascii'), file=sys.stderr)
+
+
+if __name__ == '__main__':
+    main()
