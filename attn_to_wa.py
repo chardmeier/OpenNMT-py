@@ -40,7 +40,7 @@ def lazy_load_attention(fnames):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-attn', action='append', required=True, help='NMT attentions')
+    parser.add_argument('-attn', nargs='*', required=True, help='NMT attentions')
     parser.add_argument('-src', required=True, help='Tokenised source corpus')
     parser.add_argument('-tgt', required=True, help='Tokenised target corpus')
     parser.add_argument('-alig', required=True, help='Word alignments')
