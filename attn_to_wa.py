@@ -62,6 +62,9 @@ def main():
             running_loss = 0
             count = 0
             skipped = 0
+            srcf.seek(0)
+            tgtf.seek(0)
+            aligf.seek(0)
             for attn_mat, alig_mat in zip(lazy_load_attention(args.attn), alignment_matrices(srcf, tgtf, aligf)):
                 if attn_mat.shape[:2] != alig_mat.shape[::-1]:
                     #print('Matrix size mismatch: attn_mat %s and alig_mat %s' % (str(alig_mat.shape),
