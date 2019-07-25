@@ -33,6 +33,7 @@ def alignment_matrices(srcf, tgtf, aligf):
 
 def lazy_load_attention(fnames):
     for fn in fnames:
+        print(fn, file=sys.stderr)
         attn = torch.load(fn)
         yield from iter(attn)
         del attn
