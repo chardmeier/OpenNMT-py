@@ -418,7 +418,8 @@ class Translator(object):
             src,
             tgt,
             src_dir=None,
-            batch_size=None):
+            batch_size=None,
+            dump_file=None):
         """Get attentions from forced decoding of ``src`` into ``tgt``.
 
         Args:
@@ -470,6 +471,13 @@ class Translator(object):
                 srclen = len(example.src[0])
                 tgtlen = len(example.tgt[0])
                 all_attentions.append(attn[:tgtlen, i, :srclen, :].to(device='cpu'))
+
+                if dump_file:
+                    srctxt = ' '.join(example.src[0])
+                    tgttxt = ' '.join(example.tgt[0])
+                    merged = srctxt + ' ||| ' + tgttxt
+                    print(merged.encode('unicode_escape').decode('ascii'), file=dump_file)
+
             del attn
             gc.collect()
 

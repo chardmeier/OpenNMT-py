@@ -20,15 +20,20 @@ def main(opt):
     translator = build_translator(opt, report_score=True)
     shard_pairs = make_shards(opt.src, opt.tgt, opt.shard_size, docid_path=opt.docids)
 
+    dumpf = open(opt.dump_for_alignment, 'w') if opt.dump_for_alignment else None
+
     for i, (src_shard, tgt_shard) in enumerate(shard_pairs):
         logger.info("Translating shard %d." % i)
         attns = translator.get_forced_attentions(
             src=src_shard,
             tgt=tgt_shard,
             src_dir=opt.src_dir,
-            batch_size=opt.batch_size
+            batch_size=opt.batch_size,
+            dump_file=dumpf
         )
         torch.save(attns, opt.all_attn_file + '.%02d' % i)
+
+    dumpf.close()
 
 
 def _get_parser():

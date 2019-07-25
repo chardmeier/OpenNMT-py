@@ -606,6 +606,8 @@ def translate_opts(parser):
                    "call tools/test_rouge.py on command line")
     group.add('--report_time', '-report_time', action='store_true',
               help="Report some translation time metrics")
+    group.add('--dump_for_alignment', '-dump_for_alignment',
+              help="Dump unicode-escaped text for word aligner (forced_attn.py only)")
 
     # Options most relevant to summarization.
     group.add('--dynamic_dict', '-dynamic_dict', action='store_true',
