@@ -15,9 +15,9 @@ class AttentionToWordAlignment(torch.nn.Module):
         self.conv = torch.nn.Conv2d(nlayers * nheads, 1, kernel_size=kernel_size, padding=kernel_size // 2)
 
     def forward(self, attn):
-        nx, ny = attn.shape[3:]
-        cnvin = attn.view(-1, self.nlayers * self.nheads, nx, ny)
-        return self.conv(cnvin).squeeze(1)
+        nx, ny, nattns = attn.shape
+        cnvin = attn.permute(2, 1, 0).unsqueeze(0)
+        return self.conv(cnvin).squeeze(1).squeeze(0)
 
 
 def alignment_matrices(srcf, tgtf, aligf):
@@ -60,7 +60,13 @@ def main():
         for epoch in range(args.epochs):
             running_loss = 0
             count = 0
+            skipped = 0
             for attn_mat, alig_mat in zip(lazy_load_attention(args.attn), alignment_matrices(srcf, tgtf, aligf)):
+                if attn_mat.shape[:2] != alig_mat.shape[::-1]:
+                    #print('Matrix size mismatch: attn_mat %s and alig_mat %s' % (str(alig_mat.shape),
+                    #                                                             str(attn_mat.shape)))
+                    skipped += 1
+                    continue
                 optim.zero_grad()
                 pred = a2wa(attn_mat)
                 loss = criterion(pred, alig_mat)
@@ -71,6 +77,7 @@ def main():
                 count += 1
 
             print('Epoch %d: Loss = %g' % (epoch, running_loss / count), file=sys.stderr)
+            print('Skipped %d examples' % skipped)
 
     torch.save(a2wa.state_dict(), args.save_model)
 
