@@ -80,7 +80,8 @@ def main():
             print('Epoch %d: Loss = %g' % (epoch, running_loss / count), file=sys.stderr)
             print('Skipped %d examples' % skipped)
 
-    torch.save(a2wa.state_dict(), args.save_model)
+            print('Saving checkpoint.')
+            torch.save(a2wa.state_dict(), args.save_model)
 
 
 if __name__ == '__main__':
