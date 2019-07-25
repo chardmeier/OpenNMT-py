@@ -63,8 +63,8 @@ def make_shards(src_path, tgt_path, shard_size, docid_path=None):
                         finish_doc = docid_prefix
                     else:
                         yield src_shard, tgt_shard
-                        src_shard = []
-                        tgt_shard = []
+                        src_shard = [l_src]
+                        tgt_shard = [l_tgt]
 
             if src_shard:
                 yield src_shard, tgt_shard
