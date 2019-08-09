@@ -263,10 +263,10 @@ class DocumentBuilder:
 
             if discard_12person:
                 self.discard_pronouns = {'I', 'me', 'my', 'myself',
-                                         'you', 'your', 'yourself', 'yourselves',
-                                         'we', 'us', 'our', 'ourselves'}
+                                         'you', 'You', 'your', 'Your', 'yourself', 'yourselves',
+                                         'we', 'We', 'us', 'our', 'Our', 'ourselves'}
             else:
-                self.discard_pronouns = {}
+                self.discard_pronouns = set()
 
     @classmethod
     def from_opt(cls, opt):
@@ -295,7 +295,7 @@ class DocumentBuilder:
                 for i, cluster in enumerate(clusters):
                     n12 = 0
                     for a, b in cluster:
-                        if a == b and coref_pred['document'][a] in self.discard_pronouns:
+                        if self.discard_pronouns.intersection(coref_pred['document'][a:b + 1]):
                             n12 += 1
                     if n12 > .6 * len(cluster):
                         discard_clusters.add(i)
