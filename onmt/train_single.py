@@ -67,7 +67,8 @@ def main(opt, device_id):
         vocab = checkpoint['vocab']
         src_multifield = vocab['src']
         vocab['src'] = CorefField(max_mentions_before=opt.max_mentions_before,
-                                  max_mentions_after=opt.max_mentions_after)
+                                  max_mentions_after=opt.max_mentions_after,
+                                  cross_sentence_anaphora=opt.cross_sentence_anaphora)
         vocab['src'].src_field = src_multifield.fields[0][1]
     else:
         checkpoint = None

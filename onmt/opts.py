@@ -192,6 +192,8 @@ def model_opts(parser):
                        help='Maximum of preceding mentions to consider.')
     group.add_argument('-max_mentions_after', type=int, default=1000,
                        help='Maximum of following mentions to consider.')
+    group.add_argument('-cross_sentence_anaphora', action='store_true',
+                       help='Consider mentions in precedings sentences only.')
 
 
 def preprocess_opts(parser):
