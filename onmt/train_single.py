@@ -83,6 +83,9 @@ def main(opt, device_id):
     else:
         fields = vocab
 
+    # Cross sentence anaphora flag may not be what we want
+    fields['src'].cross_sentence_anaphora = opt.cross_sentence_anaphora
+
     # Report src and tgt vocab sizes, including for features
     for side in ['src', 'tgt']:
         f = fields[side]
