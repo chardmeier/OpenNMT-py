@@ -29,6 +29,8 @@ class CorefField(torchtext.data.RawField):
         self.max_mentions_before = kwargs.pop('max_mentions_before', 1000)
         self.max_mentions_after = kwargs.pop('max_mentions_after', 1000)
 
+        self.cross_sentence_anaphora = kwargs.pop('cross_sentence_anaphora', False)
+
         self.name = kwargs.get('base_name')
         self.src_field = torchtext.data.Field(init_token=kwargs.get('bos'), eos_token=kwargs.get('eos'),
                                               pad_token=kwargs.get('pad'),
@@ -84,8 +86,6 @@ class CorefField(torchtext.data.RawField):
 
         total_chains = 0
         for i, ex in enumerate(batch):
-            total_chains += len(ex[1]) if ex[1] else 0
-
             if ex[1] and len(ex[1][0]) == 2:
                 # Older datasets don't have the cluster id
                 examples = ((spans, emb, -1) for spans, emb in ex[1])
@@ -99,7 +99,15 @@ class CorefField(torchtext.data.RawField):
                 min_pos_in_cluster = min(s[1] for s in spans)
                 max_pos_in_cluster = max(s[1] for s in spans)
                 emb_from = max(0, min_pos_in_cluster - self.max_mentions_before)
-                emb_to = min(chain_length, max_pos_in_cluster + self.max_mentions_after)
+
+                if not self.cross_sentence_anaphora:
+                    emb_to = min(chain_length, max_pos_in_cluster + self.max_mentions_after)
+                else:
+                    emb_to = min_pos_in_cluster
+                    if emb_from == emb_to:
+                        continue
+
+                total_chains += 1
 
                 l_chain_map.append(i)
                 l_chain_start.append(min_pos_in_cluster)
