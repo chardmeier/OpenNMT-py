@@ -245,7 +245,7 @@ class CorefDataReader(DataReaderBase):
                 continue
 
             for i, s in enumerate(tok_src):
-                yield {'src': (s, doc.coref_per_snt[i]), 'indices': i}
+                yield {'src': (s, doc.coref_per_snt[i]), 'indices': i, 'docid': docid}
 
 
 class DocumentBuilder:
