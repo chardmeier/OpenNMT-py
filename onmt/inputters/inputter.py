@@ -592,6 +592,8 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
             except StopIteration:
                 return None
 
+        self.batches = []
+
         data_iter = iter(self.data())
         next_example = next(data_iter)
         started_docs = []
@@ -607,7 +609,7 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
 
                 complete_batch = minibatch.offer(example)
                 if complete_batch:
-                    yield complete_batch
+                    self.batches.append(complete_batch)
                     started_docs = started_docs2 + started_docs
                     started_docs2 = []
 
@@ -620,7 +622,7 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
 
                 complete_batch = minibatch.offer(next_example)
                 if complete_batch:
-                    yield complete_batch
+                    self.batches.append(complete_batch)
 
                 next_example = try_next(data_iter)
 
@@ -633,7 +635,7 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
 
         leftover_batch = minibatch.leftover_batch()
         if leftover_batch:
-            yield leftover_batch
+            self.batches.append(leftover_batch)
 
 
 class DatasetLazyIter(object):
@@ -667,7 +669,7 @@ class DatasetLazyIter(object):
         logger.info('Loading dataset from %s, number of examples: %d' %
                     (path, len(cur_dataset)))
         cur_dataset.fields = self.fields
-        cur_iter = OrderedIterator(
+        cur_iter = MixedDocumentBatchingIterator(
             dataset=cur_dataset,
             batch_size=self.batch_size,
             batch_size_multiple=self.batch_size_multiple,
