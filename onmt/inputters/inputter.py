@@ -532,6 +532,110 @@ class OrderedIterator(torchtext.data.Iterator):
                 self.batches.append(sorted(b, key=self.sort_key))
 
 
+class MinibatchBuilder:
+    def __init__(self, batch_size, batch_size_multiple=1, batch_size_fn=None):
+        if batch_size_fn:
+            self.batch_size_fn = batch_size_fn
+        else:
+            self.batch_size_fn = lambda new, count, sofar: count
+
+        self.batch_size = batch_size
+        self.batch_size_multiple = batch_size_multiple
+
+        self.incomplete_batch = []
+        self.size_so_far = 0
+
+    def offer(self, example):
+        # code adapted from function batch_iter
+
+        self.incomplete_batch.append(example)
+        self.size_so_far = self.batch_size_fn(example, len(self.incomplete_batch), self.size_so_far)
+
+        complete_batch = None
+        if self.size_so_far >= self.batch_size:
+            overflowed = 0
+            if self.size_so_far > self.batch_size:
+                overflowed += 1
+            if self.batch_size_multiple > 1:
+                overflowed += (len(self.incomplete_batch) - overflowed) % self.batch_size_multiple
+
+            if overflowed == 0:
+                complete_batch = self.incomplete_batch
+                self.incomplete_batch = []
+                self.size_so_far = 0
+            else:
+                complete_batch = self.incomplete_batch[:-overflowed]
+                self.incomplete_batch = self.incomplete_batch[-overflowed:]
+                self.size_so_far = 0
+                for i, ex in enumerate(self.incomplete_batch):
+                    self.size_so_far = self.batch_size_fn(ex, i + 1, self.size_so_far)
+
+        return complete_batch
+
+    def leftover_batch(self):
+        batch = self.incomplete_batch
+        self.incomplete_batch = []
+        self.size_so_far = 0
+        return batch
+
+
+class MixedDocumentBatchingIterator(torchtext.data.Iterator):
+
+    def __init__(self, dataset, batch_size, batch_size_multiple=1, **kwargs):
+        super(MixedDocumentBatchingIterator, self).__init__(dataset, batch_size, **kwargs)
+        self.batch_size_multiple = batch_size_multiple
+
+    def create_batches(self):
+        def try_next(it):
+            try:
+                return next(it)
+            except StopIteration:
+                return None
+
+        data_iter = iter(self.data())
+        next_example = next(data_iter)
+        started_docs = []
+        minibatch = MinibatchBuilder(self.batch_size, self.batch_size_multiple, self.batch_size_fn)
+
+        while next_example or started_docs:
+            started_docs2 = []
+            while started_docs:
+                doc = started_docs.pop(0)
+                example = doc.pop(0)
+                if doc:
+                    started_docs2.append(doc)
+
+                complete_batch = minibatch.offer(example)
+                if complete_batch:
+                    yield complete_batch
+                    started_docs = started_docs2 + started_docs
+                    started_docs2 = []
+
+            started_docs = started_docs2
+
+            complete_batch = None
+            while next_example and not complete_batch:
+                new_doc = []
+                docid = next_example.docid
+
+                complete_batch = minibatch.offer(next_example)
+                if complete_batch:
+                    yield complete_batch
+
+                next_example = try_next(data_iter)
+
+                while next_example.docid == docid:
+                    new_doc.append(next_example)
+                    next_example = try_next(data_iter)
+
+                if new_doc:
+                    started_docs.append(new_doc)
+
+        leftover_batch = minibatch.leftover_batch()
+        if leftover_batch:
+            yield leftover_batch
+
+
 class DatasetLazyIter(object):
     """Yield data from sharded dataset files.
 
