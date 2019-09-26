@@ -585,6 +585,10 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
         super(MixedDocumentBatchingIterator, self).__init__(dataset, batch_size, **kwargs)
         self.batch_size_multiple = batch_size_multiple
 
+        # The examples must be in document order!
+        self.sort = False
+        self.shuffle = False
+
     def create_batches(self):
         def try_next(it):
             try:
@@ -626,16 +630,16 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
 
                 next_example = try_next(data_iter)
 
-                while next_example.docid == docid:
+                while next_example and next_example.docid == docid:
                     new_doc.append(next_example)
                     next_example = try_next(data_iter)
 
                 if new_doc:
                     started_docs.append(new_doc)
 
-        leftover_batch = minibatch.leftover_batch()
-        if leftover_batch:
-            self.batches.append(leftover_batch)
+            leftover_batch = minibatch.leftover_batch()
+            if leftover_batch:
+                self.batches.append(leftover_batch)
 
 
 class DatasetLazyIter(object):
