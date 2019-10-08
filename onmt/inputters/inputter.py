@@ -610,6 +610,9 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
                 example = doc.pop(0)
                 if doc:
                     started_docs2.append(doc)
+                    example.doc_continues = True
+                else:
+                    example.doc_continues = False
 
                 complete_batch = minibatch.offer(example)
                 if complete_batch:
