@@ -232,6 +232,6 @@ class CorefMemory:
                 continue
 
             doc_outputs = self.memory.get(docid, [])
-            doc_outputs.append(outputs[:, i, :])
+            doc_outputs.append(outputs[:, i, :].detach())
             self.memory[docid] = doc_outputs
 
