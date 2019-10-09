@@ -124,6 +124,10 @@ def get_fields(
     if src_data_type == 'coref':
         docid = Field(use_vocab=False, dtype=torch.long, sequential=False)
         fields["docid"] = docid
+        sentno = Field(use_vocab=False, dtype=torch.long, sequential=False)
+        fields["sentno"] = sentno
+        doc_continues = Field(use_vocab=False, dtype=torch.uint8, sequential=False)
+        fields["doc_continues"] = doc_continues
 
     if dynamic_dict:
         src_map = Field(
@@ -610,9 +614,6 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
                 example = doc.pop(0)
                 if doc:
                     started_docs2.append(doc)
-                    example.doc_continues = True
-                else:
-                    example.doc_continues = False
 
                 complete_batch = minibatch.offer(example)
                 if complete_batch:
@@ -627,15 +628,24 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
                 new_doc = []
                 docid = next_example.docid
 
-                complete_batch = minibatch.offer(next_example)
+                example = next_example
+                next_example = try_next(data_iter)
+
+                example.sentno = 0
+                example.doc_continues = (next_example and next_example.docid == docid)
+
+                complete_batch = minibatch.offer(example)
                 if complete_batch:
                     self.batches.append(complete_batch)
 
-                next_example = try_next(data_iter)
-
+                nsent = 1
                 while next_example and next_example.docid == docid:
-                    new_doc.append(next_example)
+                    example = next_example
                     next_example = try_next(data_iter)
+                    example.sentno = nsent
+                    nsent += 1
+                    example.doc_continues = (next_example and next_example.docid == docid)
+                    new_doc.append(example)
 
                 if new_doc:
                     started_docs.append(new_doc)
