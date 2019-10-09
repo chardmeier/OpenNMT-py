@@ -15,6 +15,7 @@ import torch
 
 import onmt.utils
 from onmt.utils.logging import logger
+import onmt.encoders.coref_encoder
 
 
 def build_trainer(opt, device_id, model, fields, optim, model_saver=None):
@@ -188,6 +189,8 @@ class Trainer(object):
             train_iter = itertools.islice(
                 train_iter, self.gpu_rank, None, self.n_gpu)
 
+        coref_memory = onmt.encoders.coref_encoder.CorefMemory()
+
         for i, (batches, normalization) in enumerate(
                 self._accum_batches(train_iter)):
             step = self.optim.training_step
@@ -206,7 +209,7 @@ class Trainer(object):
 
             self._gradient_accumulation(
                 batches, normalization, total_stats,
-                report_stats)
+                report_stats, coref_memory=coref_memory)
 
             if self.average_decay > 0 and i % self.average_every == 0:
                 self._update_average(step)
@@ -288,7 +291,7 @@ class Trainer(object):
         return stats
 
     def _gradient_accumulation(self, true_batches, normalization, total_stats,
-                               report_stats):
+                               report_stats, coref_memory=None):
         if self.grad_accum_count > 1:
             self.optim.zero_grad()
 
@@ -317,6 +320,9 @@ class Trainer(object):
                     self.optim.zero_grad()
                 outputs, attns = self.model(src, tgt, src_lengths, bptt=bptt)
                 bptt = True
+
+                if coref_memory:
+                    coref_memory.store_batch(batch, outputs)
 
                 # 3. Compute loss.
                 loss, batch_stats = self.train_loss(

@@ -218,3 +218,20 @@ class CorefTransformerEncoder(EncoderBase):
 
         out = self.layer_norm(out)
         return emb, out.transpose(0, 1).contiguous(), lengths
+
+
+class CorefMemory:
+    def __init__(self):
+        self.memory = {}
+
+    def store_batch(self, batch, outputs):
+        for i, (docid, sentno, doc_continues) in enumerate(zip(batch.docid, batch.sentno, batch.doc_continues)):
+            if not doc_continues:
+                if docid in self.memory:
+                    del self.memory[docid]
+                continue
+
+            doc_outputs = self.memory.get(docid, [])
+            doc_outputs.append(outputs[:, i, :])
+            self.memory[docid] = doc_outputs
+
