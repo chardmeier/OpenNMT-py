@@ -225,13 +225,17 @@ class CorefMemory:
         self.memory = {}
 
     def store_batch(self, batch, outputs):
-        for i, (docid, sentno, doc_continues) in enumerate(zip(batch.docid, batch.sentno, batch.doc_continues)):
-            if not doc_continues:
-                if docid in self.memory:
-                    del self.memory[docid]
-                continue
+        for docid, doc_continues in zip(batch.docid, batch.doc_continues):
+            if not doc_continues and docid in self.memory:
+                del self.memory[docid]
 
-            doc_outputs = self.memory.get(docid, [])
-            doc_outputs.append(outputs[:, i, :].detach())
-            self.memory[docid] = doc_outputs
+        context = batch.src[1]
+        for chain_id, idx in zip(context.chain_id, context.chain_map):
+            docid = batch.docid[idx]
+            if batch.doc_continues[idx]:
+                doc_outputs = self.memory.get(docid, {})
+                chain_outputs = doc_outputs.get(chain_id, [])
+                chain_outputs.append(outputs[:, idx, :].detach())
+                doc_outputs[chain_id] = chain_outputs
+                self.memory[docid] = doc_outputs
 
