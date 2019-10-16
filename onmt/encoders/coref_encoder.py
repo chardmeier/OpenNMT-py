@@ -1,3 +1,4 @@
+import collections
 import math
 import onmt
 import torch
@@ -229,13 +230,16 @@ class CorefMemory:
             if not doc_continues and docid in self.memory:
                 del self.memory[docid]
 
-        context = batch.src[1]
+        context = batch.src[0][1]
+        if context is None:
+            return
+
         for chain_id, idx in zip(context.chain_id, context.chain_map):
             docid = batch.docid[idx]
             if batch.doc_continues[idx]:
                 doc_outputs = self.memory.get(docid, {})
                 chain_outputs = doc_outputs.get(chain_id, [])
                 chain_outputs.append(outputs[:, idx, :].detach())
-                doc_outputs[chain_id] = chain_outputs
+                doc_outputs[chain_id.item()] = chain_outputs
                 self.memory[docid] = doc_outputs
 
