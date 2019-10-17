@@ -177,6 +177,7 @@ class CorefTransformerEncoder(EncoderBase):
                  dropout, embeddings, coref_gate_per_word):
         super(CorefTransformerEncoder, self).__init__()
 
+        self.d_model = d_model
         self.num_layers = num_layers
         self.embeddings = embeddings
         self.transformer = torch.nn.ModuleList(
@@ -200,6 +201,9 @@ class CorefTransformerEncoder(EncoderBase):
             embeddings,
             opt.coref_gate_per_word)
 
+    def create_encoder_memory(self):
+        return CorefMemory(self.d_model)
+
     def forward(self, inp, lengths=None):
         src, context = inp
         self._check_args(src, lengths)
@@ -222,8 +226,9 @@ class CorefTransformerEncoder(EncoderBase):
 
 
 class CorefMemory:
-    def __init__(self):
+    def __init__(self, embedding_size):
         self.memory = {}
+        self.embedding_size = embedding_size
 
     def store_batch(self, batch, outputs):
         for docid, doc_continues in zip(batch.docid, batch.doc_continues):
@@ -234,12 +239,13 @@ class CorefMemory:
         if context is None:
             return
 
+        pass
         for chain_id, idx in zip(context.chain_id, context.chain_map):
-            docid = batch.docid[idx]
+            docid = batch.docid[idx].item()
             if batch.doc_continues[idx]:
                 doc_outputs = self.memory.get(docid, {})
                 chain_outputs = doc_outputs.get(chain_id, [])
-                chain_outputs.append(outputs[:, idx, :].detach())
+                chain_outputs.append(torch.mean(outputs[:, idx, :].detach(), dim=0))
                 doc_outputs[chain_id.item()] = chain_outputs
                 self.memory[docid] = doc_outputs
 
