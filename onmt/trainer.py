@@ -189,7 +189,7 @@ class Trainer(object):
             train_iter = itertools.islice(
                 train_iter, self.gpu_rank, None, self.n_gpu)
 
-        coref_memory = onmt.encoders.coref_encoder.CorefMemory()
+        encoder_memory = self.model.encoder.create_encoder_memory()
 
         for i, (batches, normalization) in enumerate(
                 self._accum_batches(train_iter)):
@@ -209,7 +209,7 @@ class Trainer(object):
 
             self._gradient_accumulation(
                 batches, normalization, total_stats,
-                report_stats, coref_memory=coref_memory)
+                report_stats, encoder_memory=encoder_memory)
 
             if self.average_decay > 0 and i % self.average_every == 0:
                 self._update_average(step)
@@ -291,7 +291,7 @@ class Trainer(object):
         return stats
 
     def _gradient_accumulation(self, true_batches, normalization, total_stats,
-                               report_stats, coref_memory=None):
+                               report_stats, encoder_memory=None):
         if self.grad_accum_count > 1:
             self.optim.zero_grad()
 
@@ -321,8 +321,8 @@ class Trainer(object):
                 outputs, attns = self.model(src, tgt, src_lengths, bptt=bptt)
                 bptt = True
 
-                if coref_memory:
-                    coref_memory.store_batch(batch, outputs)
+                if encoder_memory:
+                    encoder_memory.store_batch(batch, outputs)
 
                 # 3. Compute loss.
                 loss, batch_stats = self.train_loss(
