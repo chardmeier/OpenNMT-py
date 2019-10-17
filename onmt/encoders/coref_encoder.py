@@ -249,3 +249,29 @@ class CorefMemory:
                 doc_outputs[chain_id.item()] = chain_outputs
                 self.memory[docid] = doc_outputs
 
+    def prepare_src(self, batch):
+        inp, context = batch.src[0]
+
+        if context is None:
+            return inp, None
+
+        chainlen_dim = 0
+        for chain_id, idx in zip(context.chain_id, context.chain_map):
+            docid = batch.docid[idx].item()
+            chain_id = chain_id.item()
+            if docid in self.memory and chain_id in self.memory[docid]:
+                chainlen_dim = max(chainlen_dim, len(self.memory[docid][chain_id]))
+
+        if chainlen_dim == 0:
+            return inp, None
+
+        coref_matrix = torch.empty(context.chain_id.shape[0], chainlen_dim, self.embedding_size)
+        for i, (chain_id, idx) in enumerate(zip(context.chain_id, context.chain_map)):
+            docid = batch.docid[idx].item()
+            chain_id = chain_id.item()
+            if docid in self.memory and chain_id in self.memory[docid]:
+                chain = self.memory[docid][chain_id]
+                coref_matrix[i, :len(chain), :] = torch.stack(chain, dim=0)
+
+        context.coref_matrix = coref_matrix
+        return inp, context

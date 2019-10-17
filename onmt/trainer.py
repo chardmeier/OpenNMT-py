@@ -318,7 +318,13 @@ class Trainer(object):
                 # 2. F-prop all but generator.
                 if self.grad_accum_count == 1:
                     self.optim.zero_grad()
-                outputs, attns = self.model(src, tgt, src_lengths, bptt=bptt)
+
+                if encoder_memory:
+                    coref_src = encoder_memory.prepare_src(batch)
+                else:
+                    coref_src = src
+
+                outputs, attns = self.model(coref_src, tgt, src_lengths, bptt=bptt)
                 bptt = True
 
                 if encoder_memory:
