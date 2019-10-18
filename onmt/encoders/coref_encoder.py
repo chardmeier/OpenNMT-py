@@ -241,7 +241,6 @@ class CorefMemory:
         if context is None:
             return
 
-        pass
         for chain_id, idx in zip(context.chain_id, context.chain_map):
             docid = batch.docid[idx].item()
             chain_id = chain_id.item()
