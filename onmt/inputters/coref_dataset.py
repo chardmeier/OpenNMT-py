@@ -30,6 +30,7 @@ class CorefField(torchtext.data.RawField):
         self.max_mentions_after = kwargs.pop('max_mentions_after', 1000)
 
         self.cross_sentence_anaphora = kwargs.pop('cross_sentence_anaphora', False)
+        self.include_current_sentence = kwargs.pop('include_current_sentence', True)
 
         self.name = kwargs.get('base_name')
         self.src_field = torchtext.data.Field(init_token=kwargs.get('bos'), eos_token=kwargs.get('eos'),
@@ -83,6 +84,7 @@ class CorefField(torchtext.data.RawField):
         l_span_embeddings = []
         l_mask = []
         l_mention_pos_in_chain = []
+        l_context_mentions = []
 
         total_chains = 0
         for i, ex in enumerate(batch):
@@ -99,11 +101,16 @@ class CorefField(torchtext.data.RawField):
                 min_pos_in_cluster = min(s[1] for s in spans)
                 max_pos_in_cluster = max(s[1] for s in spans)
                 emb_from = max(0, min_pos_in_cluster - self.max_mentions_before)
+                context_mentions = min_pos_in_cluster - emb_from
 
                 if not self.cross_sentence_anaphora:
                     emb_to = min(chain_length, max_pos_in_cluster + self.max_mentions_after)
                 else:
-                    emb_to = min_pos_in_cluster
+                    if self.include_current_sentence:
+                        emb_to = max_pos_in_cluster + 1
+                    else:
+                        emb_to = min_pos_in_cluster
+
                     if emb_from == emb_to:
                         continue
 
@@ -113,6 +120,7 @@ class CorefField(torchtext.data.RawField):
                 l_chain_start.append(min_pos_in_cluster)
                 l_chain_id.append(cluster_id)
                 l_span_embeddings.append(emb[emb_from:emb_to, :])
+                l_context_mentions.append(min_pos_in_cluster - emb_from)
                 snt_mask = torch.zeros(pad_len, dtype=torch.uint8)
                 snt_mention_pos_in_chain = torch.full((pad_len,), -1, device=device, dtype=torch.long)
                 for span, pos_in_chain in spans:
@@ -132,9 +140,12 @@ class CorefField(torchtext.data.RawField):
             span_embeddings = torch.zeros(total_chains, max_chain_length, self.span_emb_size, device=device)
             attention_mask = torch.ones(total_chains, pad_len, max_chain_length, device=device, dtype=torch.uint8)
 
-            for i, (emb, snt_mask) in enumerate(zip(l_span_embeddings, l_mask)):
+            for i, (emb, snt_mask, context_mentions) in enumerate(zip(l_span_embeddings, l_mask, l_context_mentions)):
                 span_embeddings[i, :emb.shape[0], :] = emb
-                attention_mask[i, snt_mask, :emb.shape[0]] = 0
+                n_attention_spans = emb.shape[0]
+                if self.cross_sentence_anaphora:
+                    n_attention_spans = min(n_attention_spans, context_mentions)
+                attention_mask[i, snt_mask, :n_attention_spans] = 0
 
             coref_context = CorefContext([x[0] for x in batch], chain_id, chain_map, chain_start, span_embeddings,
                                          attention_mask, mention_pos_in_chain)
@@ -169,6 +180,9 @@ class CorefContext:
         # A [nchains x sentence_length] long tensor indicating the chain-internal position of each mention
         # in the sentence
         self.mention_pos_in_chain = mention_pos_in_chain
+        # A [nchains x max_chain_length x model_dim] float tensor holding the inputs to the
+        # coref part of the model. Will be set by CorefMemory.
+        self.coref_matrix = None
 
 
 def coref_sort_key(ex):

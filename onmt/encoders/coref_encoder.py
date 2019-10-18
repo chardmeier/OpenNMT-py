@@ -119,16 +119,18 @@ class CorefTransformerLayer(torch.nn.Module):
             # document has no mentions
             gated_context = self.dropout_attn(attn_context)
         else:
-            # Linearly map span embeddings from the size used by AllenNLP to our model size.
-            emb_transformed = self.linear_context(coref_context.span_embeddings)
+            # # Linearly map span embeddings from the size used by AllenNLP to our model size.
+            # emb_transformed = self.linear_context(coref_context.span_embeddings)
+            emb_transformed = coref_context.coref_matrix
             # Multiply input rows so that we have one instance of the sentence for each chain referred to
             context_query = torch.index_select(input_norm, 0, coref_context.chain_map)
             # Add positional embeddings to span embeddings and query
             context_query = self.positional_embeddings('query', context_query, coref_context.mention_pos_in_chain)
             emb_transformed = self.positional_embeddings('chain', emb_transformed, coref_context.chain_start)
             # Attention to vectors in coref chain
+            attention_mask = coref_context.attention_mask[:, :, :emb_transformed.shape[1]]
             ctx_out, _ = self.context_attn(emb_transformed, emb_transformed, context_query,
-                                           mask=coref_context.attention_mask, type='coref')
+                                           mask=attention_mask, type='coref')
             # Reduce output so we get one row per example again
             ctx_context, sentence_mask = _aggregate_chains(input_norm.shape[0], ctx_out,
                                                            coref_context.chain_map, coref_context.attention_mask)
@@ -242,12 +244,14 @@ class CorefMemory:
         pass
         for chain_id, idx in zip(context.chain_id, context.chain_map):
             docid = batch.docid[idx].item()
+            chain_id = chain_id.item()
             if batch.doc_continues[idx]:
                 doc_outputs = self.memory.get(docid, {})
                 chain_outputs = doc_outputs.get(chain_id, [])
                 chain_outputs.append(torch.mean(outputs[:, idx, :].detach(), dim=0))
-                doc_outputs[chain_id.item()] = chain_outputs
+                doc_outputs[chain_id] = chain_outputs
                 self.memory[docid] = doc_outputs
+                print('doc %d - chain %d: len %d' % (docid, chain_id, len(chain_outputs)))
 
     def prepare_src(self, batch):
         inp, context = batch.src[0]
