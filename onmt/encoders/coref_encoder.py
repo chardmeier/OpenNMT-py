@@ -247,8 +247,11 @@ class CorefMemory:
             if batch.doc_continues[idx]:
                 doc_outputs = self.memory.setdefault(docid, {})
                 chain_outputs = doc_outputs.setdefault(chain_id, [])
-                chain_outputs.append(torch.mean(outputs[:, idx, :].detach(), dim=0))
+                chain_outputs.append(self._process_output(batch, outputs, idx))
                 print('doc %d - chain %d: len %d' % (docid, chain_id, len(chain_outputs)))
+
+    def _process_output(self, batch, outputs, idx):
+        return torch.mean(outputs[:, idx, :].detach(), dim=0)
 
     def prepare_src(self, batch):
         inp, context = batch.src[0]
