@@ -269,7 +269,7 @@ class CorefMemory:
         if chainlen_dim == 0:
             return inp, None
 
-        coref_matrix = torch.zeros(context.chain_id.shape[0], chainlen_dim, self.embedding_size)
+        coref_matrix = torch.zeros(context.chain_id.shape[0], chainlen_dim, self.embedding_size, device=inp.device)
         for i, (chain_id, idx) in enumerate(zip(context.chain_id, context.chain_map)):
             docid = batch.docid[idx].item()
             chain_id = chain_id.item()
