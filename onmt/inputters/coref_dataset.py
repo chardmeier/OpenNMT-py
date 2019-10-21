@@ -143,8 +143,9 @@ class CorefField(torchtext.data.RawField):
             for i, (emb, snt_mask, context_mentions) in enumerate(zip(l_span_embeddings, l_mask, l_context_mentions)):
                 span_embeddings[i, :emb.shape[0], :] = emb
                 n_attention_spans = emb.shape[0]
-                if self.cross_sentence_anaphora:
-                    n_attention_spans = min(n_attention_spans, context_mentions)
+                # TODO: disable mentions in current sentence for attention. Or not?
+                # if self.cross_sentence_anaphora:
+                #     n_attention_spans = min(n_attention_spans, context_mentions)
                 attention_mask[i, snt_mask, :n_attention_spans] = 0
 
             coref_context = CorefContext([x[0] for x in batch], chain_id, chain_map, chain_start, span_embeddings,

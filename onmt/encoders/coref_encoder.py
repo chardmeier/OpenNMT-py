@@ -241,17 +241,18 @@ class CorefTransformerEncoder(EncoderBase):
             if batch.doc_continues[idx]:
                 doc_outputs = self.memory.setdefault(docid, {})
                 chain_outputs = doc_outputs.setdefault(chain_id, [])
-                chain_outputs.append(self._process_output(batch, model_out, idx))
+                chain_outputs.append(self._process_output(context, model_out, idx))
                 print('doc %d - chain %d: len %d' % (docid, chain_id, len(chain_outputs)))
 
-    def _process_output(self, batch, model_out, idx):
+    def _process_output(self, context, model_out, idx):
         src_emb = model_out['src_emb'][:, idx, :].detach()
         enc_out = model_out['enc_out'][:, idx, :].detach()
         dec_out = model_out['dec_out'][:, idx, :].detach()
 
         src_vec = torch.cat([src_emb, enc_out], dim=-1)
         alig = torch.nn.functional.softmax(src_vec @ self.alignment_weights @ dec_out.t(), dim=-1)
-        return torch.sum(alig @ dec_out, dim=0)
+        out = (1 - context.attention_mask[idx, :, 0]).float() @ alig @ dec_out
+        return out
 
 
     def prepare_src(self, batch):
