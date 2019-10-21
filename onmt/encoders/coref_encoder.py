@@ -232,7 +232,7 @@ class CorefMemory:
         self.memory = {}
         self.embedding_size = embedding_size
 
-    def store_batch(self, batch, model_out)
+    def store_batch(self, batch, model_out):
         for docid, doc_continues in zip(batch.docid, batch.doc_continues):
             if not doc_continues and docid in self.memory:
                 del self.memory[docid]
