@@ -32,6 +32,7 @@ class NMTModel(nn.Module):
                 If reset then init_state
 
         Returns:
+            TODO: Update return value docs
             (FloatTensor, dict[str, FloatTensor]):
 
             * decoder output ``(tgt_len, batch, hidden)``
@@ -44,4 +45,10 @@ class NMTModel(nn.Module):
             self.decoder.init_state(src, memory_bank, enc_state)
         dec_out, attns = self.decoder(tgt, memory_bank,
                                       memory_lengths=lengths)
-        return dec_out, attns
+        return {
+            'dec_out': dec_out,
+            'attns': attns,
+            'src_emb': enc_state,
+            'enc_out': memory_bank,
+            'lengths': lengths
+        }

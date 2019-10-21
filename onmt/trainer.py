@@ -324,11 +324,13 @@ class Trainer(object):
                 else:
                     coref_src = src
 
-                outputs, attns = self.model(coref_src, tgt, src_lengths, bptt=bptt)
+                model_out = self.model(coref_src, tgt, src_lengths, bptt=bptt)
+                outputs = model_out['dec_out']
+                attns = model_out['attns']
                 bptt = True
 
                 if encoder_memory:
-                    encoder_memory.store_batch(batch, outputs)
+                    encoder_memory.store_batch(batch, outputs, attns)
 
                 # 3. Compute loss.
                 loss, batch_stats = self.train_loss(
