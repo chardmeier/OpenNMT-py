@@ -189,7 +189,7 @@ class Trainer(object):
             train_iter = itertools.islice(
                 train_iter, self.gpu_rank, None, self.n_gpu)
 
-        encoder_memory = self.model.encoder.create_encoder_memory()
+        encoder_memory = self.model.encoder.memory
 
         for i, (batches, normalization) in enumerate(
                 self._accum_batches(train_iter)):
@@ -209,7 +209,7 @@ class Trainer(object):
 
             self._gradient_accumulation(
                 batches, normalization, total_stats,
-                report_stats, encoder_memory=encoder_memory)
+                report_stats)
 
             if self.average_decay > 0 and i % self.average_every == 0:
                 self._update_average(step)
@@ -291,7 +291,7 @@ class Trainer(object):
         return stats
 
     def _gradient_accumulation(self, true_batches, normalization, total_stats,
-                               report_stats, encoder_memory=None):
+                               report_stats):
         if self.grad_accum_count > 1:
             self.optim.zero_grad()
 
@@ -319,18 +319,13 @@ class Trainer(object):
                 if self.grad_accum_count == 1:
                     self.optim.zero_grad()
 
-                if encoder_memory:
-                    coref_src = encoder_memory.prepare_src(batch)
-                else:
-                    coref_src = src
-
-                model_out = self.model(coref_src, tgt, src_lengths, bptt=bptt)
+                prep_src = self.model.encoder.prepare_src(batch)
+                model_out = self.model(prep_src, tgt, src_lengths, bptt=bptt)
                 outputs = model_out['dec_out']
                 attns = model_out['attns']
                 bptt = True
 
-                if encoder_memory:
-                    encoder_memory.store_batch(batch, model_out)
+                self.model.encoder.store_batch(batch, model_out)
 
                 # 3. Compute loss.
                 loss, batch_stats = self.train_loss(

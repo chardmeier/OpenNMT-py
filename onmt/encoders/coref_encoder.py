@@ -189,6 +189,8 @@ class CorefTransformerEncoder(EncoderBase):
                                                    dropout, coref_gate_per_word)
         self.layer_norm = torch.nn.LayerNorm(d_model, eps=1e-6)
 
+        self.memory = {}
+
     @classmethod
     def from_opt(cls, opt, embeddings):
         """Alternate constructor."""
@@ -202,9 +204,6 @@ class CorefTransformerEncoder(EncoderBase):
             opt.dropout,
             embeddings,
             opt.coref_gate_per_word)
-
-    def create_encoder_memory(self):
-        return CorefMemory(self.d_model)
 
     def forward(self, inp, lengths=None):
         src, context = inp
@@ -225,12 +224,6 @@ class CorefTransformerEncoder(EncoderBase):
 
         out = self.layer_norm(out)
         return emb, out.transpose(0, 1).contiguous(), lengths
-
-
-class CorefMemory:
-    def __init__(self, embedding_size):
-        self.memory = {}
-        self.embedding_size = embedding_size
 
     def store_batch(self, batch, model_out):
         for docid, doc_continues in zip(batch.docid, batch.doc_continues):
@@ -269,7 +262,7 @@ class CorefMemory:
         if chainlen_dim == 0:
             return inp, None
 
-        coref_matrix = torch.zeros(context.chain_id.shape[0], chainlen_dim, self.embedding_size, device=inp.device)
+        coref_matrix = torch.zeros(context.chain_id.shape[0], chainlen_dim, self.d_model, device=inp.device)
         for i, (chain_id, idx) in enumerate(zip(context.chain_id, context.chain_map)):
             docid = batch.docid[idx].item()
             chain_id = chain_id.item()

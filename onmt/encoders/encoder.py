@@ -56,3 +56,10 @@ class EncoderBase(nn.Module):
         """
 
         raise NotImplementedError
+
+    def store_batch(self, batch, model_out):
+        pass
+
+    def prepare_src(self, batch):
+        return batch.src[0] if isinstance(batch.src, tuple) else batch.src
+
