@@ -232,7 +232,7 @@ class CorefMemory:
         self.memory = {}
         self.embedding_size = embedding_size
 
-    def store_batch(self, batch, outputs, attns):
+    def store_batch(self, batch, model_out)
         for docid, doc_continues in zip(batch.docid, batch.doc_continues):
             if not doc_continues and docid in self.memory:
                 del self.memory[docid]
@@ -247,11 +247,11 @@ class CorefMemory:
             if batch.doc_continues[idx]:
                 doc_outputs = self.memory.setdefault(docid, {})
                 chain_outputs = doc_outputs.setdefault(chain_id, [])
-                chain_outputs.append(self._process_output(batch, outputs, attns, idx))
+                chain_outputs.append(self._process_output(batch, model_out, idx))
                 print('doc %d - chain %d: len %d' % (docid, chain_id, len(chain_outputs)))
 
-    def _process_output(self, batch, outputs, attns, idx):
-        return outputs[:, idx, :].detach()
+    def _process_output(self, batch, model_out, idx):
+        return model_out['dec_out'][:, idx, :].detach()
 
     def prepare_src(self, batch):
         inp, context = batch.src[0]

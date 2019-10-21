@@ -330,7 +330,7 @@ class Trainer(object):
                 bptt = True
 
                 if encoder_memory:
-                    encoder_memory.store_batch(batch, outputs, attns)
+                    encoder_memory.store_batch(batch, model_out)
 
                 # 3. Compute loss.
                 loss, batch_stats = self.train_loss(
