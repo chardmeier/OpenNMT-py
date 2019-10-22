@@ -254,7 +254,6 @@ class CorefTransformerEncoder(EncoderBase):
         out = (1 - context.attention_mask[idx, :, 0]).float() @ alig @ dec_out
         return out
 
-
     def prepare_src(self, batch):
         inp, context = batch.src[0]
 
