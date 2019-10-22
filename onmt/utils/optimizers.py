@@ -26,7 +26,7 @@ def build_torch_optimizer(model, opt):
 
     Args:
       model: The model to optimize.
-      opt. The dictionary of options.
+      opt: The dictionary of options.
 
     Returns:
       A ``torch.optim.Optimizer`` instance.
