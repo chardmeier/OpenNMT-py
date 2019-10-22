@@ -10,7 +10,7 @@ from math import sqrt
 from onmt.utils.misc import fn_args
 
 
-def build_torch_optimizer(model, opt):
+def build_torch_optimizer(params, opt):
     """Builds the PyTorch optimizer.
 
     We use the default parameters for Adam that are suggested by
@@ -25,13 +25,12 @@ def build_torch_optimizer(model, opt):
     established value, so we use that here as well
 
     Args:
-      model: The model to optimize.
+      params: The parameters to optimize.
       opt: The dictionary of options.
 
     Returns:
       A ``torch.optim.Optimizer`` instance.
     """
-    params = [p for p in model.parameters() if p.requires_grad]
     betas = [opt.adam_beta1, opt.adam_beta2]
     if opt.optim == 'sgd':
         optimizer = optim.SGD(params, lr=opt.learning_rate)
@@ -55,6 +54,7 @@ def build_torch_optimizer(model, opt):
             betas=betas,
             eps=1e-9)
     elif opt.optim == 'sparseadam':
+        raise NotImplementedError  # need to sort the parameters
         dense = []
         sparse = []
         for name, param in model.named_parameters():
@@ -255,8 +255,9 @@ class Optimizer(object):
                 # Reset options, keep optimizer.
                 optim_state_dict = ckpt_state_dict
 
+        params = [p for p in model.parameters if p.requires_grad]
         optimizer = cls(
-            build_torch_optimizer(model, optim_opt),
+            build_torch_optimizer(params, optim_opt),
             optim_opt.learning_rate,
             learning_rate_decay_fn=make_learning_rate_decay_fn(optim_opt),
             max_grad_norm=optim_opt.max_grad_norm)
