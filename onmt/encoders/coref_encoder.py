@@ -235,23 +235,23 @@ class CorefTransformerEncoder(EncoderBase):
         if context is None:
             return
 
-        for chain_id, idx in zip(context.chain_id, context.chain_map):
-            docid = batch.docid[idx].item()
+        for chain_idx, (chain_id, batch_idx)  in enumerate(zip(context.chain_id, context.chain_map)):
+            docid = batch.docid[batch_idx].item()
             chain_id = chain_id.item()
-            if batch.doc_continues[idx]:
+            if batch.doc_continues[batch_idx]:
                 doc_outputs = self.memory.setdefault(docid, {})
                 chain_outputs = doc_outputs.setdefault(chain_id, [])
-                chain_outputs.append(self._process_output(context, model_out, idx))
+                chain_outputs.append(self._process_output(context, model_out, batch_idx, chain_idx))
                 print('doc %d - chain %d: len %d' % (docid, chain_id, len(chain_outputs)))
 
-    def _process_output(self, context, model_out, idx):
-        src_emb = model_out['src_emb'][:, idx, :].detach()
-        enc_out = model_out['enc_out'][:, idx, :].detach()
-        dec_out = model_out['dec_out'][:, idx, :].detach()
+    def _process_output(self, context, model_out, batch_idx, chain_idx):
+        src_emb = model_out['src_emb'][:, batch_idx, :].detach()
+        enc_out = model_out['enc_out'][:, batch_idx, :].detach()
+        dec_out = model_out['dec_out'][:, batch_idx, :].detach()
 
         src_vec = torch.cat([src_emb, enc_out], dim=-1)
         alig = torch.nn.functional.softmax(src_vec @ self.alignment_weights @ dec_out.t(), dim=-1)
-        out = (1 - context.attention_mask[idx, :, 0]).float() @ alig @ dec_out
+        out = (1 - context.attention_mask[chain_idx, :, 0]).float() @ alig @ dec_out
         return out
 
     def prepare_src(self, batch):
