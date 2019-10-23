@@ -190,7 +190,6 @@ class CorefTransformerEncoder(EncoderBase):
         self.layer_norm = torch.nn.LayerNorm(d_model, eps=1e-6)
 
         self.memory = {}
-        self.alignment_weights = torch.nn.Parameter(torch.zeros(2 * self.d_model, self.d_model))
 
     @classmethod
     def from_opt(cls, opt, embeddings):
@@ -245,12 +244,8 @@ class CorefTransformerEncoder(EncoderBase):
                 print('doc %d - chain %d: len %d' % (docid, chain_id, len(chain_outputs)))
 
     def _process_output(self, context, model_out, batch_idx, chain_idx):
-        src_emb = model_out['src_emb'][:, batch_idx, :].detach()
-        enc_out = model_out['enc_out'][:, batch_idx, :].detach()
         dec_out = model_out['dec_out'][:, batch_idx, :].detach()
-
-        src_vec = torch.cat([src_emb, enc_out], dim=-1)
-        alig = torch.nn.functional.softmax(src_vec @ self.alignment_weights @ dec_out.t(), dim=-1)
+        alig = model_out['alignment'][batch_idx, :, :].detach()
         out = (1 - context.attention_mask[chain_idx, :, 0]).float() @ alig @ dec_out
         return out
 

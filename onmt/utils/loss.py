@@ -50,7 +50,8 @@ def build_loss_compute(model, tgt_field, opt, train=True):
             criterion, loss_gen, tgt_field.vocab, opt.copy_loss_by_seqlength
         )
     else:
-        compute = NMTLossCompute(criterion, loss_gen)
+        # compute = NMTLossCompute(criterion, loss_gen)
+        compute = NMTAndAlignmentLossCompute(criterion, loss_gen)
     compute.to(device)
 
     return compute
@@ -227,7 +228,7 @@ class NMTLossCompute(LossComputeBase):
             "target": batch.tgt[range_[0] + 1: range_[1], :, 0],
         }
 
-    def _compute_loss(self, batch, output, target):
+    def _compute_loss(self, batch, output, target, alignment):
         bottled_output = self._bottle(output)
 
         scores = self.generator(bottled_output)
@@ -236,6 +237,37 @@ class NMTLossCompute(LossComputeBase):
         loss = self.criterion(scores, gtruth)
         stats = self._stats(loss.clone(), scores, gtruth)
 
+        return loss, stats
+
+
+class NMTAndAlignmentLossCompute(LossComputeBase):
+    """
+    Standard NMT Loss Computation.
+    """
+
+    def __init__(self, criterion, generator, normalization="sents"):
+        super(NMTAndAlignmentLossCompute, self).__init__(criterion, generator)
+
+    def _make_shard_state(self, batch, output, range_, attns=None):
+        return {
+            "output": output,
+            "target": batch.tgt[range_[0] + 1: range_[1], :, 0],
+            "gold_alignment": batch.gold_alignment[range_[0] + 1:range_[1], :, :]
+        }
+
+    def _compute_loss(self, batch, model_out, target, gold_alignment):
+        output = model_out['dec_out']
+        bottled_output = self._bottle(output)
+
+        scores = self.generator(bottled_output)
+        gtruth = target.view(-1)
+
+        nmt_loss = self.criterion(scores, gtruth)
+        stats = self._stats(nmt_loss.clone(), scores, gtruth)
+
+        alig_loss = -torch.sum(torch.log(gold_alignment * model_out['alignment']))
+
+        loss = nmt_loss + self.alig_weight * alig_loss
         return loss, stats
 
 

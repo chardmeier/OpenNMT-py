@@ -1,4 +1,5 @@
 """ Onmt NMT Model base class definition """
+import torch
 import torch.nn as nn
 
 
@@ -16,6 +17,7 @@ class NMTModel(nn.Module):
         super(NMTModel, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
+        self.alignment_weights = nn.Parameter(torch.zeros(2 * encoder.d_model, encoder.d_model))
 
     def forward(self, src, tgt, lengths, bptt=False):
         """Forward propagate a `src` and `tgt` pair for training.
@@ -45,10 +47,15 @@ class NMTModel(nn.Module):
             self.decoder.init_state(src, memory_bank, enc_state)
         dec_out, attns = self.decoder(tgt, memory_bank,
                                       memory_lengths=lengths)
+
+        src_vec = torch.cat([enc_state, memory_bank], dim=-1).transpose(0, 1)
+        alignment = torch.nn.functional.softmax(src_vec @ self.alignment_weights @ dec_out.permute(1, 2, 0), dim=-1)
+
         return {
             'dec_out': dec_out,
             'attns': attns,
             'src_emb': enc_state,
             'enc_out': memory_bank,
-            'lengths': lengths
+            'lengths': lengths,
+            'alignment': alignment
         }

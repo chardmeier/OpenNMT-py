@@ -255,7 +255,7 @@ class Optimizer(object):
                 # Reset options, keep optimizer.
                 optim_state_dict = ckpt_state_dict
 
-        params = [p for p in model.parameters if p.requires_grad]
+        params = [p for n, p in model.named_parameters() if p.requires_grad and n != 'encoder.alignment_weights']
         optimizer = cls(
             build_torch_optimizer(params, optim_opt),
             optim_opt.learning_rate,
