@@ -19,7 +19,7 @@ def zip_equal(*iterables):
         yield combo
 
 
-def make_shards(src_path, tgt_path, shard_size, docid_path=None):
+def make_shards(src_path, tgt_path, shard_size, docid_path=None, alig_path=None):
     with contextlib.ExitStack() as stack:
         f_src = stack.enter_context(open(src_path, 'rb'))
 
@@ -33,14 +33,20 @@ def make_shards(src_path, tgt_path, shard_size, docid_path=None):
         else:
             f_docid = itertools.repeat(None)
 
+        if alig_path is not None:
+            f_alig = stack.enter_context(open(alig_path, 'r'))
+        else:
+            f_alig = itertools.repeat(None)
+
         if shard_size <= 0:
-            yield zip_equal(f_src.readlines(), f_tgt.readlines())
+            yield zip_equal(f_src.readlines(), f_tgt.readlines(), f_alig.readlines())
         else:
             src_shard = []
             tgt_shard = []
+            alig_shard = []
             docid_prefix = b''
             finish_doc = None
-            for l_src, l_tgt, l_docid in zip_equal(f_src, f_tgt, f_docid):
+            for l_src, l_tgt, l_docid, l_alig in zip_equal(f_src, f_tgt, f_docid, f_alig):
                 if docid_path is not None:
                     docid_prefix = (l_docid.rstrip('\n').split('\t')[0] + '\t').encode('utf-8')
 
@@ -48,16 +54,19 @@ def make_shards(src_path, tgt_path, shard_size, docid_path=None):
                     if docid_prefix == finish_doc:
                         src_shard.append(docid_prefix + l_src)
                         tgt_shard.append(l_tgt)
+                        alig_shard.append(l_alig)
                         continue
                     else:
-                        yield src_shard, tgt_shard
+                        yield src_shard, tgt_shard, alig_shard
                         finish_doc = None
                         src_shard = []
                         tgt_shard = []
+                        alig_shard = []
 
                 if len(src_shard) < shard_size:
                     src_shard.append(docid_prefix + l_src)
                     tgt_shard.append(l_tgt)
+                    alig_shard.append(l_alig)
                 else:
                     if docid_path is not None:
                         finish_doc = docid_prefix
@@ -65,9 +74,10 @@ def make_shards(src_path, tgt_path, shard_size, docid_path=None):
                         yield src_shard, tgt_shard
                         src_shard = [l_src]
                         tgt_shard = [l_tgt]
+                        alig_shard = [l_alig]
 
             if src_shard:
-                yield src_shard, tgt_shard
+                yield src_shard, tgt_shard, alig_shard
 
 
 def aeq(*args):

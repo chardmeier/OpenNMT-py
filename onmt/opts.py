@@ -213,12 +213,16 @@ def preprocess_opts(parser):
               help="Path to the training target data")
     group.add('--train_docids', '-train_docids',
               help="Path to the training document IDs (for coref)")
+    group.add('--train_alig', '-train_alig', required=True,
+              help="Path to the training word alignments")
     group.add('--valid_src', '-valid_src',
               help="Path to the validation source data")
     group.add('--valid_tgt', '-valid_tgt',
               help="Path to the validation target data")
     group.add('--valid_docids', '-valid_docids',
               help="Path to the validation document IDs (for coref)")
+    group.add('--valid_alig', '-valid_alig',
+              help="Path to the validation word alignments")
 
     group.add('--src_dir', '-src_dir', default="",
               help="Source directory for image or audio files.")

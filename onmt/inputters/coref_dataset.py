@@ -195,6 +195,25 @@ def coref_sort_key(ex):
     return len(ex.src)
 
 
+class AlignmentDataReader(DataReaderBase):
+    def read(self, sequences, side, _dir=None):
+        assert _dir is None or _dir == "", \
+            "Cannot use _dir with CorefDataReader."
+        if isinstance(sequences, str):
+            sequences = DataReaderBase._read_file(sequences)
+
+        for i, seq in enumerate(sequences):
+            if isinstance(seq, six.binary_type):
+                seq = seq.decode("utf-8")
+
+            if seq is None:
+                tok = []
+            else:
+                tok = [(int(a), int(b)) for ap in seq.split(' ') for a, b in ap.split('-')]
+
+            yield {side: tok, 'indices': i}
+
+
 class CorefDataReader(DataReaderBase):
     def __init__(self, src_lang, tgt_lang, doc_builder):
         logger.info('Loading Spacy model for %s' % src_lang)

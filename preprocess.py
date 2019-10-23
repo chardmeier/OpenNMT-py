@@ -28,21 +28,23 @@ def check_existing_pt_files(opt):
             sys.exit(1)
 
 
-def build_save_dataset(corpus_type, fields, src_reader, tgt_reader, opt):
+def build_save_dataset(corpus_type, fields, src_reader, tgt_reader, alig_reader, opt):
     assert corpus_type in ['train', 'valid']
 
     if corpus_type == 'train':
         src = opt.train_src
         tgt = opt.train_tgt
         docids = opt.train_docids
+        alig = opt.train_alig
     else:
         src = opt.valid_src
         tgt = opt.valid_tgt
         docids = opt.valid_docids
+        alig = opt.valid_alig
 
     logger.info("Reading source and target files: %s %s." % (src, tgt))
 
-    shard_pairs = make_shards(src, tgt, opt.shard_size, docid_path=docids)
+    shard_triples = make_shards(src, tgt, opt.shard_size, docid_path=docids, alig_path=alig)
     dataset_paths = []
     if (corpus_type == "train" or opt.filter_valid) and tgt is not None:
         filter_pred = partial(
@@ -50,15 +52,15 @@ def build_save_dataset(corpus_type, fields, src_reader, tgt_reader, opt):
             max_src_len=opt.src_seq_length, max_tgt_len=opt.tgt_seq_length)
     else:
         filter_pred = None
-    for i, (src_shard, tgt_shard) in enumerate(shard_pairs):
+    for i, (src_shard, tgt_shard, alig_shard) in enumerate(shard_triples):
         assert len(src_shard) == len(tgt_shard)
         logger.info("Building shard %d." % i)
         dataset = inputters.Dataset(
             fields,
-            readers=[src_reader, tgt_reader] if tgt_reader else [src_reader],
-            data=([("src", src_shard), ("tgt", tgt_shard)]
+            readers=[src_reader, tgt_reader, alig_reader] if tgt_reader else [src_reader],
+            data=([("src", src_shard), ("tgt", tgt_shard), ("alig", alig_shard)]
                   if tgt_reader else [("src", src_shard)]),
-            dirs=[opt.src_dir, None] if tgt_reader else [opt.src_dir],
+            dirs=[opt.src_dir, None, None] if tgt_reader else [opt.src_dir],
             sort_key=inputters.str2sortkey[opt.data_type],
             filter_pred=filter_pred
         )
@@ -127,14 +129,15 @@ def main(opt):
 
     src_reader = inputters.str2reader[opt.data_type].from_opt(opt)
     tgt_reader = inputters.str2reader["text"].from_opt(opt)
+    alig_reader = inputters.coref_dataset.AlignmentDataReader()
 
     logger.info("Building & saving training data...")
     train_dataset_files = build_save_dataset(
-        'train', fields, src_reader, tgt_reader, opt)
+        'train', fields, src_reader, tgt_reader, alig_reader, opt)
 
     if opt.valid_src and opt.valid_tgt:
         logger.info("Building & saving validation data...")
-        build_save_dataset('valid', fields, src_reader, tgt_reader, opt)
+        build_save_dataset('valid', fields, src_reader, tgt_reader, alig_reader, opt)
 
     logger.info("Building & saving vocabulary...")
     build_save_vocab(train_dataset_files, fields, opt)
