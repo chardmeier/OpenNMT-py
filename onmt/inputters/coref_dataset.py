@@ -209,7 +209,8 @@ class AlignmentDataReader(DataReaderBase):
             if seq is None:
                 tok = []
             else:
-                tok = [(int(a), int(b)) for ap in seq.split(' ') for a, b in ap.split('-')]
+                aps = [ap.split('-') for ap in seq.rstrip('\n').split(' ')]
+                tok = [(int(ap[0]), int(ap[1])) for ap in aps]
 
             yield {side: tok, 'indices': i}
 
