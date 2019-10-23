@@ -252,7 +252,7 @@ class NMTAndAlignmentLossCompute(LossComputeBase):
         return {
             "output": output,
             "target": batch.tgt[range_[0] + 1: range_[1], :, 0],
-            "gold_alignment": batch.gold_alignment[range_[0] + 1:range_[1], :, :]
+            "gold_alignment": batch.gold_alignment[range_[0]:range_[1], :, :]
         }
 
     def _compute_loss(self, batch, model_out, target, gold_alignment):
