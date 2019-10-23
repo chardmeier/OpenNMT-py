@@ -128,6 +128,8 @@ def get_fields(
         fields["sentno"] = sentno
         doc_continues = Field(use_vocab=False, dtype=torch.uint8, sequential=False)
         fields["doc_continues"] = doc_continues
+        gold_alignment = Field(use_vocab=False, dtype=torch.uint8, sequential=False)
+        fields["gold_alignment"] = gold_alignment
 
     if dynamic_dict:
         src_map = Field(
