@@ -197,7 +197,7 @@ def model_opts(parser):
 
 
 def preprocess_opts(parser):
-    """ Pre-procesing options """
+    """ Pre-processing options """
     # Data options
     group = parser.add_argument_group('Data')
     group.add('--data_type', '-data_type', default="text",
