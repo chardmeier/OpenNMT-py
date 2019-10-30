@@ -321,7 +321,7 @@ class Trainer(object):
 
                 prep_src = self.model.encoder.prepare_src(batch)
                 model_out = self.model(prep_src, tgt, src_lengths, bptt=bptt)
-                outputs = model_out['dec_out']
+                # outputs = model_out['dec_out']
                 attns = model_out['attns']
                 bptt = True
 
@@ -330,7 +330,8 @@ class Trainer(object):
                 # 3. Compute loss.
                 loss, batch_stats = self.train_loss(
                     batch,
-                    outputs,
+                    model_out,
+                    # outputs,
                     attns,
                     normalization=normalization,
                     shard_size=self.shard_size,
