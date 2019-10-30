@@ -255,9 +255,9 @@ class NMTAndAlignmentLossCompute(LossComputeBase):
             "gold_alignment": batch.gold_alignment[range_[0]:range_[1], :, :]
         }
 
-    def _compute_loss(self, batch, model_out, target, gold_alignment):
-        output = model_out['dec_out']
-        bottled_output = self._bottle(output)
+    def _compute_loss(self, batch, output, target, gold_alignment):
+        dec_out = output['dec_out']
+        bottled_output = self._bottle(dec_out)
 
         scores = self.generator(bottled_output)
         gtruth = target.view(-1)
