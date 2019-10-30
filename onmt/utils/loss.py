@@ -265,7 +265,7 @@ class NMTAndAlignmentLossCompute(LossComputeBase):
         nmt_loss = self.criterion(scores, gtruth)
         stats = self._stats(nmt_loss.clone(), scores, gtruth)
 
-        alig_loss = -torch.sum(torch.log(gold_alignment * model_out['alignment']))
+        alig_loss = -torch.sum(torch.log(gold_alignment * output['alignment']))
 
         loss = nmt_loss + self.alig_weight * alig_loss
         return loss, stats
