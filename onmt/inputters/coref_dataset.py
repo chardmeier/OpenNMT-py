@@ -195,6 +195,20 @@ def coref_sort_key(ex):
     return len(ex.src)
 
 
+class AlignmentField(torchtext.data.RawField):
+    sequential = False
+    has_vocab = False
+
+    def process(self, batch, device=-1):
+        srcmax = max(ap[0] for l in batch for ap in l) + 1
+        tgtmax = max(ap[1] for l in batch for ap in l) + 1
+        out = torch.zeros(len(batch), srcmax, tgtmax, dtype=torch.uint8)
+        for i, l in enumerate(batch):
+            for s, t in l:
+                out[i, s, t] = 1
+        return out.to(device=device)
+
+
 class AlignmentDataReader(DataReaderBase):
     def read(self, sequences, side, _dir=None):
         assert _dir is None or _dir == "", \

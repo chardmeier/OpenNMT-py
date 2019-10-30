@@ -13,7 +13,7 @@ from torchtext.data import Field
 from torchtext.vocab import Vocab
 
 from onmt.inputters.text_dataset import text_fields, TextMultiField
-from onmt.inputters.coref_dataset import coref_fields
+from onmt.inputters.coref_dataset import coref_fields, AlignmentField
 from onmt.inputters.image_dataset import image_fields
 from onmt.inputters.audio_dataset import audio_fields
 from onmt.utils.logging import logger
@@ -128,7 +128,7 @@ def get_fields(
         fields["sentno"] = sentno
         doc_continues = Field(use_vocab=False, dtype=torch.uint8, sequential=False)
         fields["doc_continues"] = doc_continues
-        gold_alignment = Field(use_vocab=False, dtype=torch.uint8, sequential=False)
+        gold_alignment = AlignmentField()
         fields["gold_alignment"] = gold_alignment
 
     if dynamic_dict:

@@ -58,7 +58,7 @@ def build_save_dataset(corpus_type, fields, src_reader, tgt_reader, alig_reader,
         dataset = inputters.Dataset(
             fields,
             readers=[src_reader, tgt_reader, alig_reader] if tgt_reader else [src_reader],
-            data=([("src", src_shard), ("tgt", tgt_shard), ("alig", alig_shard)]
+            data=([("src", src_shard), ("tgt", tgt_shard), ("gold_alignment", alig_shard)]
                   if tgt_reader else [("src", src_shard)]),
             dirs=[opt.src_dir, None, None] if tgt_reader else [opt.src_dir],
             sort_key=inputters.str2sortkey[opt.data_type],
