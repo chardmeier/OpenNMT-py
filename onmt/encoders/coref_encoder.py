@@ -245,7 +245,7 @@ class CorefTransformerEncoder(EncoderBase):
 
     def _process_output(self, context, model_out, batch_idx, chain_idx):
         dec_out = model_out['dec_out'][:, batch_idx, :].detach()
-        alig = model_out['alignment'][batch_idx, :, :].detach()
+        alig = model_out['alignment'][:, batch_idx, :].detach()
         out = (1 - context.attention_mask[chain_idx, :, 0]).float() @ alig @ dec_out
         return out
 

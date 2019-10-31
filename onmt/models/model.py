@@ -57,5 +57,5 @@ class NMTModel(nn.Module):
             'src_emb': enc_state,
             'enc_out': memory_bank,
             'lengths': lengths,
-            'alignment': alignment
+            'alignment': alignment.transpose(0, 1)
         }

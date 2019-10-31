@@ -202,10 +202,10 @@ class AlignmentField(torchtext.data.RawField):
     def process(self, batch, device=-1):
         srcmax = max(ap[0] for l in batch for ap in l) + 1
         tgtmax = max(ap[1] for l in batch for ap in l) + 1
-        out = torch.zeros(len(batch), srcmax, tgtmax, dtype=torch.uint8)
+        out = torch.zeros(srcmax, len(batch), tgtmax, dtype=torch.uint8)
         for i, l in enumerate(batch):
             for s, t in l:
-                out[i, s, t] = 1
+                out[s, i, t] = 1
         return out.to(device=device)
 
 
