@@ -250,13 +250,13 @@ class NMTAndAlignmentLossCompute(LossComputeBase):
 
     def _make_shard_state(self, batch, output, range_, attns=None):
         return {
-            "output": output,
+            "dec_out": output['dec_out'],
+            "alignment": output['alignment'],
             "target": batch.tgt[range_[0] + 1: range_[1], :, 0],
             "gold_alignment": batch.gold_alignment[range_[0]:range_[1], :, :]
         }
 
-    def _compute_loss(self, batch, output, target, gold_alignment):
-        dec_out = output['dec_out']
+    def _compute_loss(self, batch, dec_out, alignment, target, gold_alignment):
         bottled_output = self._bottle(dec_out)
 
         scores = self.generator(bottled_output)
@@ -265,7 +265,7 @@ class NMTAndAlignmentLossCompute(LossComputeBase):
         nmt_loss = self.criterion(scores, gtruth)
         stats = self._stats(nmt_loss.clone(), scores, gtruth)
 
-        alig_loss = -torch.sum(torch.log(gold_alignment * output['alignment']))
+        alig_loss = -torch.sum(torch.log(gold_alignment * alignment))
 
         loss = nmt_loss + self.alig_weight * alig_loss
         return loss, stats
