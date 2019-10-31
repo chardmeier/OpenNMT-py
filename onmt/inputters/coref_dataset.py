@@ -208,7 +208,8 @@ class AlignmentField(torchtext.data.RawField):
 
     def process(self, batch, device=-1):
         srcmax = max(ap[0] for l in batch for ap in l) + 1 + self.src_bos + self.src_eos
-        tgtmax = max(ap[1] for l in batch for ap in l) + 1 + self.tgt_bos + self.tgt_eos
+        # don't add tgt_eos because it will be cut off in the decoder before scoring
+        tgtmax = max(ap[1] for l in batch for ap in l) + 1 + self.tgt_bos
         out = torch.zeros(srcmax, len(batch), tgtmax, dtype=torch.uint8)
         if self.src_bos and self.tgt_bos:
             out[0, :, 0] = 1
