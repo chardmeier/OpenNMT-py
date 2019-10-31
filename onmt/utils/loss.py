@@ -247,6 +247,7 @@ class NMTAndAlignmentLossCompute(LossComputeBase):
 
     def __init__(self, criterion, generator, normalization="sents"):
         super(NMTAndAlignmentLossCompute, self).__init__(criterion, generator)
+        self.alig_weight = float(1)
 
     def _make_shard_state(self, batch, output, range_, attns=None):
         return {
