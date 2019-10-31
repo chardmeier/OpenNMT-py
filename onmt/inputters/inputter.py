@@ -128,7 +128,7 @@ def get_fields(
         fields["sentno"] = sentno
         doc_continues = Field(use_vocab=False, dtype=torch.uint8, sequential=False)
         fields["doc_continues"] = doc_continues
-        gold_alignment = AlignmentField()
+        gold_alignment = AlignmentField(tgt_bos=True, tgt_eos=True)
         fields["gold_alignment"] = gold_alignment
 
     if dynamic_dict:

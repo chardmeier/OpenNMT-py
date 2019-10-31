@@ -199,13 +199,22 @@ class AlignmentField(torchtext.data.RawField):
     sequential = False
     has_vocab = False
 
+    def __init__(self, src_bos=False, src_eos=False, tgt_bos=False, tgt_eos=False):
+        super(AlignmentField, self).__init__()
+        self.src_bos = int(src_bos)
+        self.src_eos = int(src_eos)
+        self.tgt_bos = int(tgt_bos)
+        self.tgt_eos = int(tgt_eos)
+
     def process(self, batch, device=-1):
-        srcmax = max(ap[0] for l in batch for ap in l) + 1
-        tgtmax = max(ap[1] for l in batch for ap in l) + 1
+        srcmax = max(ap[0] for l in batch for ap in l) + 1 + self.src_bos + self.src_eos
+        tgtmax = max(ap[1] for l in batch for ap in l) + 1 + self.tgt_bos + self.tgt_eos
         out = torch.zeros(srcmax, len(batch), tgtmax, dtype=torch.uint8)
+        if self.src_bos and self.tgt_bos:
+            out[0, :, 0] = 1
         for i, l in enumerate(batch):
             for s, t in l:
-                out[s, i, t] = 1
+                out[s + self.src_bos, i, t + self.tgt_bos] = 1
         return out.to(device=device)
 
 
