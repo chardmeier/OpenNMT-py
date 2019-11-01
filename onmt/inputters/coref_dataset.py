@@ -232,7 +232,8 @@ class AlignmentDataReader(DataReaderBase):
             if isinstance(seq, six.binary_type):
                 seq = seq.decode("utf-8")
 
-            if seq is None:
+            seq = seq.rstrip('\n')
+            if not seq:
                 tok = []
             else:
                 aps = [ap.split('-') for ap in seq.rstrip('\n').split(' ')]
