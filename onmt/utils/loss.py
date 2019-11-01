@@ -284,7 +284,6 @@ def filter_shard_state(state, shard_size=None):
                     v_chunk = v_chunk.data.clone()
                     v_chunk.requires_grad = v.requires_grad
                     v_split.append(v_chunk)
-            print(k, v.shape)
             yield k, (v, v_split)
 
 
