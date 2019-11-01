@@ -284,6 +284,7 @@ def filter_shard_state(state, shard_size=None):
                     v_chunk = v_chunk.data.clone()
                     v_chunk.requires_grad = v.requires_grad
                     v_split.append(v_chunk)
+            print(k, v.shape)
             yield k, (v, v_split)
 
 
@@ -334,4 +335,6 @@ def shards(state, shard_size, eval_only=False):
                 variables.extend(zip(torch.split(state[k], shard_size),
                                      [v_chunk.grad for v_chunk in v_split]))
         inputs, grads = zip(*variables)
+        print('inputs:', [len(x) if x is not None else None for x in inputs])
+        print('grads:', [len(x) if x is not None else None for x in grads])
         torch.autograd.backward(inputs, grads)

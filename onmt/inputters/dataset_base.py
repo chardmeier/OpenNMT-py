@@ -128,6 +128,14 @@ class Dataset(TorchtextDataset):
                 src_ex_vocab, ex_dict = _dynamic_dict(
                     ex_dict, src_field.base_field, tgt_field.base_field)
                 self.src_vocabs.append(src_ex_vocab)
+
+            # TODO: Ugly hack to ensure the alignment knows the sentence length
+            gold_alignment = ex_dict.get('gold_alignment')
+            if gold_alignment:
+                srclen = len(ex_dict['src'][0])
+                tgtlen = len(ex_dict['tgt'].rstrip('\n').split(' '))
+                ex_dict['gold_alignment'] = (srclen, tgtlen, gold_alignment)
+
             ex_fields = {k: [(k, v)] for k, v in fields.items() if
                          k in ex_dict}
             ex = Example.fromdict(ex_dict, ex_fields)
