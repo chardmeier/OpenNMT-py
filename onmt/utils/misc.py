@@ -71,7 +71,7 @@ def make_shards(src_path, tgt_path, shard_size, docid_path=None, alig_path=None)
                     if docid_path is not None:
                         finish_doc = docid_prefix
                     else:
-                        yield src_shard, tgt_shard
+                        yield src_shard, tgt_shard, alig_shard
                         src_shard = [l_src]
                         tgt_shard = [l_tgt]
                         alig_shard = [l_alig]
