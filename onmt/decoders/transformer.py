@@ -222,7 +222,7 @@ class TransformerDecoder(DecoderBase):
             attns["copy"] = attn
 
         # TODO change the way attns is returned dict => list or tuple (onnx)
-        return dec_outs, attns
+        return dec_outs, attns, emb
 
     def _init_cache(self, memory_bank):
         self.state["cache"] = {}
