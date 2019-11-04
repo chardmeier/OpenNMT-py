@@ -241,7 +241,7 @@ class CorefTransformerEncoder(EncoderBase):
                 doc_outputs = self.memory.setdefault(docid, {})
                 chain_outputs = doc_outputs.setdefault(chain_id, [])
                 chain_outputs.append(self._process_output(context, model_out, batch_idx, chain_idx))
-                print('doc %d - chain %d: len %d' % (docid, chain_id, len(chain_outputs)))
+                # print('doc %d - chain %d: len %d' % (docid, chain_id, len(chain_outputs)))
 
     def _process_output(self, context, model_out, batch_idx, chain_idx):
         dec_out = model_out['dec_out'][:, batch_idx, :].detach()
