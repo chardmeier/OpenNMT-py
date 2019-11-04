@@ -10,8 +10,10 @@
 """
 
 from copy import deepcopy
+import contextlib
 import itertools
 import torch
+import torch.autograd
 
 import onmt.utils
 from onmt.utils.logging import logger
@@ -60,7 +62,8 @@ def build_trainer(opt, device_id, model, fields, optim, model_saver=None):
                            model_saver=model_saver if gpu_rank == 0 else None,
                            average_decay=average_decay,
                            average_every=average_every,
-                           model_dtype=opt.model_dtype)
+                           model_dtype=opt.model_dtype,
+                           detect_anomaly=opt.detect_anomaly)
     return trainer
 
 
@@ -93,7 +96,7 @@ class Trainer(object):
                  trunc_size=0, shard_size=32,
                  norm_method="sents", grad_accum_count=1, n_gpu=1, gpu_rank=1,
                  gpu_verbose_level=0, report_manager=None, model_saver=None,
-                 average_decay=0, average_every=1, model_dtype='fp32'):
+                 average_decay=0, average_every=1, model_dtype='fp32', detect_anomaly=False):
         # Basic attributes.
         self.model = model
         self.train_loss = train_loss
@@ -112,6 +115,8 @@ class Trainer(object):
         self.moving_average = None
         self.average_every = average_every
         self.model_dtype = model_dtype
+
+        optional_detect_anomaly = torch.autograd.detect_anomaly() if detect_anomaly else contextlib.suppress()
 
         assert grad_accum_count > 0
         if grad_accum_count > 1:
@@ -189,8 +194,6 @@ class Trainer(object):
             train_iter = itertools.islice(
                 train_iter, self.gpu_rank, None, self.n_gpu)
 
-        encoder_memory = self.model.encoder.memory
-
         for i, (batches, normalization) in enumerate(
                 self._accum_batches(train_iter)):
             step = self.optim.training_step
@@ -207,9 +210,10 @@ class Trainer(object):
                                     .all_gather_list
                                     (normalization))
 
-            self._gradient_accumulation(
-                batches, normalization, total_stats,
-                report_stats)
+            with self.optional_detect_anomaly:
+                self._gradient_accumulation(
+                    batches, normalization, total_stats,
+                    report_stats)
 
             if self.average_decay > 0 and i % self.average_every == 0:
                 self._update_average(step)

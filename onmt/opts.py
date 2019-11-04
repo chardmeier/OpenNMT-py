@@ -338,6 +338,8 @@ def train_opts(parser):
     group = parser.add_argument_group('General')
     group.add('-debug', type=int,
               help="Connect to debug server at given port number")
+    group.add('-detect_anomaly', '--detect_anomaly', type=bool,
+              help="Enable NaN detection when computing gradients.")
     group.add('--data', '-data', required=True,
               help='Path prefix to the ".train.pt" and '
                    '".valid.pt" file path from preprocess.py')
