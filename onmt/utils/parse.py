@@ -13,6 +13,10 @@ class ArgumentParser(cfargparse.ArgumentParser):
             config_file_parser_class=cfargparse.YAMLConfigFileParser,
             formatter_class=cfargparse.ArgumentDefaultsHelpFormatter,
             **kwargs):
+        """
+
+        :rtype:
+        """
         super(ArgumentParser, self).__init__(
             config_file_parser_class=config_file_parser_class,
             formatter_class=formatter_class,
