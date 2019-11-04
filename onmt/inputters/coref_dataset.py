@@ -17,6 +17,28 @@ from onmt.inputters.datareader_base import DataReaderBase
 from onmt.utils.logging import logger
 
 
+class _VocabExtender:
+    def __init__(self, stoi, itos):
+        self.stoi = stoi
+        self.itos = itos
+
+    def __getitem__(self, item):
+        if item in self.stoi:
+            return self.stoi[item]
+        else:
+            newid = len(self.stoi)
+            self.stoi[item] = newid
+            self.itos.append(item)
+            return newid
+
+
+class ExtensibleVocabulary:
+    def __init__(self):
+        self._stoi = {}
+        self.itos = []
+        self.stoi = _VocabExtender(self._stoi, self.itos)
+
+
 class CorefField(torchtext.data.RawField):
     vocab_cls = torchtext.vocab.Vocab
     sequential = True

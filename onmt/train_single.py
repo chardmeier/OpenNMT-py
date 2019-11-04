@@ -6,7 +6,7 @@ import torch
 
 from onmt.inputters.inputter import build_dataset_iter, \
     load_old_vocab, old_style_vocab
-from onmt.inputters.coref_dataset import CorefField
+from onmt.inputters.coref_dataset import CorefField, ExtensibleVocabulary
 from onmt.model_builder import build_model
 from onmt.utils.optimizers import Optimizer
 from onmt.utils.misc import set_random_seed
@@ -85,6 +85,11 @@ def main(opt, device_id):
 
     # Cross sentence anaphora flag may not be what we want
     fields['src'].cross_sentence_anaphora = opt.cross_sentence_anaphora
+
+    # Override docid vocabulary
+    if 'docid' in fields:
+        fields['docid'].use_vocab = True
+        fields['docid'].vocab = ExtensibleVocabulary()
 
     # Report src and tgt vocab sizes, including for features
     for side in ['src', 'tgt']:
