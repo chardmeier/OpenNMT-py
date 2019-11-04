@@ -234,7 +234,7 @@ class CorefTransformerEncoder(EncoderBase):
         if context is None:
             return
 
-        for chain_idx, (chain_id, batch_idx)  in enumerate(zip(context.chain_id, context.chain_map)):
+        for chain_idx, (chain_id, batch_idx) in enumerate(zip(context.chain_id, context.chain_map)):
             docid = batch.docid[batch_idx].item()
             chain_id = chain_id.item()
             if batch.doc_continues[batch_idx]:
