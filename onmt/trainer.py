@@ -116,7 +116,7 @@ class Trainer(object):
         self.average_every = average_every
         self.model_dtype = model_dtype
 
-        optional_detect_anomaly = torch.autograd.detect_anomaly() if detect_anomaly else contextlib.suppress()
+        self.optional_detect_anomaly = torch.autograd.detect_anomaly() if detect_anomaly else contextlib.suppress()
 
         assert grad_accum_count > 0
         if grad_accum_count > 1:
