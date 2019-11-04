@@ -554,6 +554,10 @@ class MinibatchBuilder:
     def offer(self, example):
         # code adapted from function batch_iter
 
+        # Discard examples where the source or the target side is empty.
+        if not example.src[0] or not example.tgt[0]:
+            return None
+
         self.incomplete_batch.append(example)
         self.size_so_far = self.batch_size_fn(example, len(self.incomplete_batch), self.size_so_far)
 
