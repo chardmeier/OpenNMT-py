@@ -48,8 +48,7 @@ class CorefPositionalEncoding(torch.nn.Module):
         :return: the sum of `emb` and the positional embeddings (same dimension as `emb`)
         """
         if mode == 'chain':
-            steps = steps.squeeze()
-            assert steps.ndimension() == 1
+            steps = steps.view(-1)
             nchains = steps.shape[0]
             chain_length = emb.shape[1]
             pe = torch.empty((nchains, chain_length, self.dim), device=emb.device)
