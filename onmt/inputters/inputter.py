@@ -638,7 +638,7 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
                 next_example = try_next(data_iter)
 
                 example.sentno = 0
-                example.doc_continues = (next_example and next_example.docid == docid)
+                example.doc_continues = bool(next_example and next_example.docid == docid)
 
                 complete_batch = minibatch.offer(example)
                 if complete_batch:
@@ -650,7 +650,7 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
                     next_example = try_next(data_iter)
                     example.sentno = nsent
                     nsent += 1
-                    example.doc_continues = (next_example and next_example.docid == docid)
+                    example.doc_continues = bool(next_example and next_example.docid == docid)
                     new_doc.append(example)
 
                 if new_doc:
