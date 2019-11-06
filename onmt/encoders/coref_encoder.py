@@ -114,7 +114,7 @@ class CorefTransformerLayer(torch.nn.Module):
         attn_context, _ = self.self_attn(input_norm, input_norm, input_norm, mask=mask)
 
         # Now the coref-specific parts.
-        if coref_context is None:
+        if coref_context is None or coref_context.coref_matrix is None:
             # document has no mentions
             gated_context = self.dropout_attn(attn_context)
         else:
