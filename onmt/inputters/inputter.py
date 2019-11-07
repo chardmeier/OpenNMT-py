@@ -656,9 +656,9 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
                 if new_doc:
                     started_docs.append(new_doc)
 
-            leftover_batch = minibatch.leftover_batch()
-            if leftover_batch:
-                self.batches.append(leftover_batch)
+        leftover_batch = minibatch.leftover_batch()
+        if leftover_batch:
+            self.batches.append(leftover_batch)
 
 
 class DatasetLazyIter(object):
