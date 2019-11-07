@@ -226,6 +226,7 @@ class CorefTransformerEncoder(EncoderBase):
 
     def store_batch(self, batch, model_out):
         for docid, doc_continues in zip(batch.docid, batch.doc_continues):
+            docid = docid.item()
             if not doc_continues and docid in self.memory:
                 del self.memory[docid]
 
