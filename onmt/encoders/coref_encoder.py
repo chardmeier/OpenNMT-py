@@ -5,6 +5,7 @@ import torch
 
 from onmt.inputters.coref_dataset import CorefField
 from onmt.encoders.encoder import EncoderBase
+from onmt.utils.logging import logger
 
 
 # The standard OpenNMT implementations of gates and positional embeddings do additional things we don't want,
@@ -227,8 +228,12 @@ class CorefTransformerEncoder(EncoderBase):
     def store_batch(self, batch, model_out):
         for docid, doc_continues in zip(batch.docid, batch.doc_continues):
             docid = docid.item()
-            if not doc_continues and docid in self.memory:
-                del self.memory[docid]
+            if docid in self.memory:
+                if doc_continues == 0:
+                    del self.memory[docid]
+                if doc_continues == 2:
+                    logger.warn("Doc %d shouldn't be in memory, removing.", docid)
+                    del self.memory[docid]
 
         context = batch.src[0][1]
         if context is None:
