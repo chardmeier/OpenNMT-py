@@ -629,27 +629,17 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
 
             started_docs = started_docs2
 
-            def doc_continues(prev_docid, docid, next_example):
-                # 0: last example in doc; 2: first example and continues; 1: somewhere in the middle
-                # Note: This must evaluate to true if and only if the document continues
-                if not next_example or docid != next_example.docid:
-                    return 0
-                if prev_docid != docid:
-                    return 2
-                return 1
-
             complete_batch = None
-            docid = None
             while next_example and not complete_batch:
                 new_doc = []
-                prev_docid = docid
                 docid = next_example.docid
 
                 example = next_example
                 next_example = try_next(data_iter)
 
                 example.sentno = 0
-                example.doc_continues = doc_continues(prev_docid, docid, next_example)
+                # 2 for the first example in a document, 0 if it's also the last
+                example.doc_continues = 2 if next_example and next_example.docid == docid else 0
 
                 complete_batch = minibatch.offer(example)
                 if complete_batch:
@@ -661,7 +651,8 @@ class MixedDocumentBatchingIterator(torchtext.data.Iterator):
                     next_example = try_next(data_iter)
                     example.sentno = nsent
                     nsent += 1
-                    example.doc_continues = doc_continues(prev_docid, docid, next_example)
+                    # 1 if the document continues, 0 if not
+                    example.doc_continues = 1 if next_example and next_example.docid == docid else 0
                     new_doc.append(example)
 
                 if new_doc:
