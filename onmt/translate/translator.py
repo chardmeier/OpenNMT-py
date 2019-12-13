@@ -558,7 +558,7 @@ class Translator(object):
         # and [src_len, batch, hidden] as memory_bank
         # in case of inference tgt_len = 1, batch = beam times batch_size
         # in case of Gold Scoring tgt_len = actual length, batch = 1 batch
-        dec_out, dec_attn = self.model.decoder(
+        dec_out, dec_attn, tgt_emb = self.model.decoder(
             decoder_in, memory_bank, memory_lengths=memory_lengths, step=step
         )
 
