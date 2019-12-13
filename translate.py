@@ -19,7 +19,7 @@ def main(opt):
     translator = build_translator(opt, report_score=True)
     shard_pairs = make_shards(opt.src, opt.tgt, opt.shard_size, docid_path=opt.docids)
 
-    for i, (src_shard, tgt_shard) in enumerate(shard_pairs):
+    for i, (src_shard, tgt_shard, alig_shard) in enumerate(shard_pairs):
         logger.info("Translating shard %d." % i)
         translator.translate(
             src=src_shard,
